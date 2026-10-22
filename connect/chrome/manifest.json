@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Music 连接助手",
+  "version": "1.0.0",
+  "description": "从 Music 设置打开独立 YouTube 登录窗口，并将本次会话接回自己的 Music。",
+  "permissions": ["cookies", "storage"],
+  "host_permissions": ["https://*.youtube.com/*", "http://127.0.0.1:18788/*"],
+  "incognito": "spanning",
+  "background": { "service_worker": "background.js", "type": "module" },
+  "content_scripts": [{ "matches": ["http://127.0.0.1:18788/*"], "js": ["content.js"], "run_at": "document_idle" }],
+  "action": { "default_title": "打开 Music 设置", "default_icon": "icon.png" },
+  "icons": { "128": "icon.png" }
+}

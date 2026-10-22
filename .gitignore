@@ -1,0 +1,7 @@
+/bin/
+/dist/
+*.local.json
+web/node_modules/
+web/dist/
+__pycache__/
+.local/

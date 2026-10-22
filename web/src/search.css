@@ -1,0 +1,42 @@
+.search-command { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: transparent; color: var(--ink); overflow: hidden; }
+.search-command::backdrop { background: rgba(18,18,22,.19); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); transition: backdrop-filter 280ms ease, background-color 220ms ease; }
+.search-command.is-docking::backdrop { background: transparent; backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
+.search-command-panel { position: fixed; top: 50%; left: 50%; width: min(650px,calc(100vw - 36px)); transform: translate(-50%,-31px); }
+.search-composer { position: relative; z-index: 7; }
+.search-composer .search-field { display: flex; align-items: center; gap: 14px; width: 100%; height: 62px; margin: 0; padding: 0 16px 0 21px; border: .5px solid var(--line); border-radius: 17px; background: var(--canvas); box-shadow: 0 12px 55px rgba(0,0,0,.12); }
+.search-field input { min-width: 0; flex: 1; width: 100%; border: 0; outline: 0; background: transparent; font: inherit; font-size: 18px; color: var(--ink); }
+.search-composer .search-submit { color: var(--accent,var(--ink)); }
+.search-options-panel { padding: 5px; margin-top: 8px; background: var(--canvas); border: .5px solid var(--line); border-radius: 14px; box-shadow: 0 18px 55px rgba(0,0,0,.12); }
+.search-options-panel[hidden] { display: none; }
+.search-options-panel.is-history { width: min(420px,calc(100% - 24px)); margin-left: 12px; }
+.search-options { padding: 0; }
+.search-option-row { display: flex; align-items: center; min-width: 0; border-radius: 9px; }
+.search-options button { display: flex; align-items: center; gap: 13px; width: 100%; min-height: 46px; padding: 9px 13px; border-radius: 10px; text-align: left; }
+.search-options button[role="option"] { min-width: 0; flex: 1; }
+.is-history .search-options button[role="option"] { min-height: 38px; padding: 7px 10px; gap: 10px; }
+.is-history .search-options button > span { font-size: 13px; }
+.search-options .search-history-remove { width: 38px; min-height: 38px; padding: 0; flex: none; justify-content: center; color: var(--secondary); transition: color 140ms ease,background-color 140ms ease,transform 140ms ease; }
+.search-history-tools { display: flex; justify-content: flex-end; padding: 0 4px 2px; }
+.search-history-tools button { padding: 5px 8px; min-height: 28px; border-radius: 7px; font-size: 12px; color: var(--secondary); }
+.search-history-remove:active,.search-history-tools button:active { transform: scale(.95); }
+@media (hover:hover) and (pointer:fine) { .search-option-row:hover { background: var(--fill); } .search-options .search-history-remove:hover,.search-history-tools button:hover { background: var(--fill); color: var(--danger,#d52d48); } }
+.search-options button > span { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 14px; }
+.search-options button > svg { color: var(--secondary); flex: none; }
+.search-options button[aria-selected="true"] { background: var(--selected); }
+.search-command.is-docking .search-options-panel { opacity: 0; pointer-events: none; transition: opacity 100ms; }
+.search-page .search-composer { margin: 4px 0 24px; }
+.search-page .search-field { box-shadow: none; background: var(--fill); }
+.search-page .search-options-panel { position: absolute; top: 100%; left: 0; right: 0; }
+html[data-search-transition] .search-page .search-composer { visibility: hidden; }
+.side-search-button { width: 100%; text-align: left; }
+@media (max-width:760px) { .search-command-panel { top: 36%; transform: translate(-50%,-28px); } .search-composer .search-field { height: 56px; padding-inline: 15px; gap: 10px; } .search-field input { font-size: 16px; } }
+@media (prefers-reduced-motion:reduce) { .search-command::backdrop { transition: none; } }
+.search-page { animation: none; }
+.search-page .page-actions { flex: 1; min-width: 0; display: block; }
+.search-page .search-composer { margin: 0; }
+.search-composer .search-field { max-width: none; }
+.search-options { max-height: min(320px,40dvh); overflow-y: auto; }
+html[data-search-transition] .search-page .song-list { opacity: 0; transform: translateY(6px); }
+.search-page .song-list { transition: opacity 200ms ease,transform 240ms cubic-bezier(.22,1,.36,1); }
+@media (max-width:760px) { .search-page .page-header { grid-template-columns: 32px minmax(0,1fr); gap: 8px; } .search-page .page-actions { grid-area: 1 / 2; width: 100%; } }
+html[data-motion="reduced"] .search-command::backdrop { transition: none; }

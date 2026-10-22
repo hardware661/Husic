@@ -1,0 +1,4 @@
+# Fixed XOR decoding bytes in Migu's public listen-info wire format, mirrored
+# by the generated test fixture. These are not account/API credentials.
+internal/platform/migu_stream.go:generic-api-key:21
+internal/platform/migu_test.go:generic-api-key:176
