@@ -148,8 +148,8 @@ export const api = {
   playlist: (id: number) => call<{ playlist: Playlist; songs: Item[] }>('GET', `/api/playlists/${id}`),
   remotePlaylist: (id: string) => call<{ playlist: Card; songs: Item[] }>('GET', `/api/netease/playlists/${id}`),
   createPlaylist: (name: string) => call<{ id: number }>('POST', '/api/playlists', { name }),
-  renamePlaylist: (id: number, name: string, description = '') =>
-    call<{ ok: boolean }>('PATCH', `/api/playlists/${id}`, { name, description }),
+  renamePlaylist: (id: number, name: string, description = '', cover = '') =>
+    call<{ ok: boolean }>('PATCH', `/api/playlists/${id}`, { name, description, cover }),
   deletePlaylist: (id: number) => call<{ ok: boolean }>('DELETE', `/api/playlists/${id}`),
   addToPlaylist: (id: number, items: Item[]) => call<{ songIds: number[] }>('POST', `/api/playlists/${id}/songs`, { items }),
   removeFromPlaylist: (id: number, songId: number) => call<{ ok: boolean }>('DELETE', `/api/playlists/${id}/songs/${songId}`),

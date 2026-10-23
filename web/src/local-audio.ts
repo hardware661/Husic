@@ -11,9 +11,10 @@ export type LocalAudioRecord = {
   importedAt: string;
   playedAt?: string;
   liked: boolean;
+  downloadKey?: string;
 };
 
-type StoredAudio = LocalAudioRecord & { downloadKey?: string };
+type StoredAudio = LocalAudioRecord;
 type AudioSnapshot = { records: LocalAudioRecord[]; loading: boolean; error: string };
 export type AudioDownload = {
   id: string;
@@ -431,10 +432,12 @@ export function dismissAudioDownload(id: string) {
 
 export function cancelAudioDownload(id: string) { downloadControllers.get(id)?.abort(); }
 
-function downloadKey(item: Item) {
+export function downloadKey(item: Item) {
   if (item.songId) return `song:${item.songId}`;
   return item.copies.map(copy => `${copy.source}:${copy.id}`).sort().join('|') || `${item.title}:${item.artists.join('/')}:${item.duration}`;
 }
+
+export function isAudioDownloading(item: Item) { return downloadKeys.has(downloadKey(item)); }
 
 // Recommendations extend Item with display-only fields. The download API
 // deliberately rejects unknown JSON properties, so send its public contract.
@@ -473,13 +476,16 @@ function responseFormat(response: Response) {
   return format;
 }
 
-export async function downloadAudio(item: Item): Promise<void> {
+export async function downloadAudio(item: Item, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) throw new Error('已取消下载');
   if (localAudioID(item)) throw new Error('这首歌已经保存在本地，可以直接另存为');
   const key = downloadKey(item);
   if (downloadKeys.has(key)) throw new Error('这首歌正在下载');
   downloadKeys.add(key);
   const id = crypto.randomUUID();
   const controller = new AbortController();
+  const cancel = () => controller.abort();
+  signal?.addEventListener('abort', cancel, { once: true });
   downloadControllers.set(id, controller);
   downloads = [{ id, item, state: 'downloading', received: 0, total: 0, error: '' }, ...downloads];
   downloadListeners.forEach(listener => listener());
@@ -537,8 +543,9 @@ export async function downloadAudio(item: Item): Promise<void> {
     controller.abort();
     const text = cancelled ? '已取消下载' : message(error, '下载失败，请重试');
     updateDownload(id, { state: cancelled ? 'cancelled' : 'failed', error: text });
-    throw new Error(text);
+    throw new Error(text, { cause: error });
   } finally {
+    signal?.removeEventListener('abort', cancel);
     downloadKeys.delete(key);
     downloadControllers.delete(id);
   }

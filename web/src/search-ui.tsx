@@ -11,7 +11,8 @@ export function SearchField({ initial='', onSearch, inputRef, overlay=false }: {
   const [historyVersion,setHistoryVersion]=useState(0);
   const keyboardChoice=useRef(false);
   const ownRef=useRef<HTMLInputElement>(null),root=useRef<HTMLDivElement>(null);const ref=inputRef||ownRef;
-  useEffect(()=>setText(initial),[initial]);
+  const [previousInitial,setPreviousInitial]=useState(initial);
+  if(previousInitial!==initial){setPreviousInitial(initial);setText(initial);}
   useEffect(()=>{
     let live=true;setActive(-1);
     const q=text.trim();const history=searchHistory().filter(s=>!q||s.toLowerCase().includes(q.toLowerCase())).map(text=>({text,kind:'history' as const}));

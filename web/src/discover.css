@@ -86,6 +86,7 @@
 .radar-sweep { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0deg 286deg, rgba(255, 255, 255, 0.3) 360deg); animation: sweep 4s linear infinite; }
 .radar-blip {
   position: absolute; width: 15%; aspect-ratio: 1; overflow: hidden; border-radius: 50%; transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px rgba(255,255,255,.55), 0 0 18px rgba(255,255,255,.28);
   animation: blip 4s linear infinite; transition: transform 0.3s var(--ease);
 }
 .radar-blip .cover { width: 100%; height: 100%; border-radius: 50%; }
@@ -94,8 +95,8 @@
 .radar-blip-no { position: absolute; inset: auto 0 0; padding: 9px 0 3px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); color: #fff; font: 700 10px/1 ui-monospace, 'SF Mono', Menlo, monospace; }
 @keyframes sweep { to { rotate: 360deg; } }
 @keyframes blip {
-  0% { opacity: 1; box-shadow: 0 0 0 2px #fff, 0 0 22px 6px rgba(255, 255, 255, 0.5); }
-  45%, 100% { opacity: 0.5; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35); }
+  0% { opacity: 1; }
+  45%, 100% { opacity: 0.5; }
 }
 .radar-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(6, auto); grid-auto-flow: column; column-gap: 28px; }
 .radar-list li { display: flex; align-items: center; gap: 14px; min-width: 0; height: 56px; padding: 0 8px; border-radius: 8px; cursor: pointer; box-shadow: inset 0 -0.5px 0 var(--line); }
@@ -349,33 +350,44 @@
   .discover-opening .blind-actions { flex-wrap: nowrap; margin-top: 10px; }
   .discover-opening .blind-actions .pill { white-space: nowrap; flex-shrink: 0; }
 }
-/* One shared shell: a quiet left rail, the blind-listening stage on the right. */
-.discover-opening { padding: 18px 24px; gap: 26px; border: .5px solid var(--line); border-radius: 24px; background: var(--fill-strong); grid-template-columns: 168px minmax(0,1fr); }
-.discover-refresh { position: static; align-self: stretch; justify-content: center; padding: 22px 22px 22px 4px; border-right: 1px solid var(--line); gap: 18px; }
-.discover-refresh > span { font-size: 15px; line-height: 1.5; color: var(--ink); }
-.discover-refresh .text-button { padding: 9px 15px; min-height: 40px; border-radius: 20px; background: var(--canvas); }
-.discover-opening .blind { width: 100%; border-radius: 17px; min-height: 224px; padding: 12px 52px 12px 12px; background: transparent; gap: 28px; }
-.discover-opening .blind-art { width: 200px; height: 200px; }
+/* Four equal listening stations; one grid owns every centre on every device. */
+.discover-opening { position: relative; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); align-items: center; gap: 0; padding: 24px 16px; min-height: 248px; border: .5px solid var(--line); border-radius: 24px; background: var(--fill-strong); }
+.discover-refresh { position: static; grid-column: 4; grid-row: 1; min-width: 0; width: 100%; align-self: center; align-items: center; justify-content: center; text-align: center; padding: 0 8px; border: 0; gap: 16px; }
+.discover-refresh > span { font-size: 14px; line-height: 1.55; color: var(--secondary); }
+.discover-refresh .text-button { padding: 9px 15px; min-height: 44px; border-radius: 24px; background: var(--canvas); white-space: nowrap; }
+.discover-opening > .blind { display: contents; }
 .discover-opening .blind-bg { display: none; }
-.discover-opening .blind-lead { grid-area: auto; top: 50%; left: auto; right: 0; transform: translateY(-50%); }
-.discover-opening .blind-tag { display: flex; flex-direction: column; align-items: center; gap: 11px; padding: 12px 6px; min-width: 32px; border-radius: 16px; }
+.discover-opening .blind-art { grid-column: 2; grid-row: 1; width: min(100% - 24px,216px); height: auto; aspect-ratio: 1; justify-self: center; }
+.discover-opening .blind-info { grid-column: 3; grid-row: 1; width: 100%; min-width: 0; padding: 0 8px; align-items: center; justify-content: center; text-align: center; gap: 8px; }
+.discover-opening .blind-info strong { min-height: 0; width: 100%; font-size: clamp(18px,2vw,26px); overflow-wrap: anywhere; }
+.discover-opening .blind-info small { max-width: 100%; }
+.discover-opening .blind-info .text-button { align-self: center; }
+.discover-opening .blind-lead { position: static; grid-column: 1; grid-row: 1; justify-self: center; transform: none; }
+.discover-opening .blind-tag { display: flex; flex-direction: column; align-items: center; gap: 11px; padding: 12px 8px; min-width: 38px; border-radius: 20px; }
 .blind-label { writing-mode: vertical-rl; letter-spacing: .2em; }
 .blind-count { font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 10px; letter-spacing: 0; }
-.discover-opening .blind-detail { min-height: 30px; }
-.discover-opening .blind-actions { margin-top: 12px; }
-@media (min-width:761px) and (max-width:1100px) { .discover-opening { grid-template-columns: 128px minmax(0,1fr); padding: 20px; gap: 18px; } .discover-refresh { padding-right: 16px; } }
+.discover-opening .blind-detail { min-height: 36px; margin-top: 0; }
+.discover-opening .blind-actions { justify-content: center; flex-wrap: wrap; width: 100%; margin-top: 0; gap: 6px; }
+.discover-opening .blind-heart:empty { display: none; }
 @media (max-width:760px) {
-  .discover-opening { display: grid; grid-template-columns: 86px minmax(0,1fr); padding: 14px; gap: 14px; border-radius: 20px; }
-  .discover-refresh { position: static; z-index: auto; padding: 12px 12px 12px 0; align-self: stretch; }
-  .discover-refresh > span { font-size: 13px; line-height: 1.6; }
-  .discover-refresh .text-button { padding: 7px 8px; gap: 5px; font-size: 12px; white-space: nowrap; }
-  .discover-refresh .text-button svg { width: 12px; }
-  .discover-opening .blind { grid-template-columns: minmax(0,1fr); padding: 4px 40px 4px 0; gap: 12px; min-height: 0; }
-  .discover-opening .blind-tag { min-width: 26px; padding: 10px 4px; gap: 8px; }
-  .discover-opening .blind-art { width: min(100%,158px); height: auto; aspect-ratio: 1; }
-  .discover-opening .blind-info strong { font-size: 18px; min-height: 0; }
-  .discover-opening .blind-actions { margin-top: 6px; gap: 4px; }
-  .discover-opening .blind-actions .pill { height: 30px; padding-inline: 10px; font-size: 12px; }
+  .discover-opening { padding: 18px 4px; min-height: 142px; border-radius: 20px; }
+  .discover-refresh { padding: 0 3px; gap: 8px; }
+  .discover-refresh > span { max-width: 7em; font-size: 11px; }
+  .discover-refresh .text-button { gap: 3px; padding: 7px 5px; font-size: 11px; max-width: 100%; }
+  .discover-refresh .text-button svg { width: 11px; }
+  .discover-opening .blind-art { width: min(100% - 8px,128px); }
+  .discover-opening .blind-art .cover { border-radius: 12px; }
+  .discover-opening .blind-info { padding: 0 2px; gap: 2px; }
+  .discover-opening .blind-info strong { font-size: clamp(13px,3vw,20px); }
+  .discover-opening .blind-info strong.blind-mask { letter-spacing: 0; }
+  .discover-opening .blind-info small { min-height: 16px; font-size: 10px; line-height: 16px; }
+  .discover-opening .blind-detail { min-height: 28px; font-size: 10px; }
+  .discover-opening .blind-actions { gap: 2px; }
+  .discover-opening .blind-actions .pill { min-height: 44px; height: auto; padding: 5px 6px; font-size: 11px; gap: 1px; white-space: nowrap; }
+  .discover-opening .blind-actions .pill svg { width: 10px; }
+  .discover-opening .blind-tag { min-width: 32px; padding: 10px 7px; gap: 7px; }
+  .discover-opening .blind-progress { width: 42px; height: 42px; }
+  .discover-opening .blind-play { width: 19px; height: 19px; }
 }
 
 .hand-card { --hand-spread: clamp(24px,calc((100cqw - 212px)/3),108px); }

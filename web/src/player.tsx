@@ -4,6 +4,9 @@ import { navigate } from './router';
 import { toast } from './toast';
 import { useDesktopLyrics } from './desktop-lyrics';
 import { localAudioID, localAudioStream, recordLocalAudioPlay } from './local-audio';
+import { consumeExpiredSleepTimer, useSleepTimerPlayback } from './sleep-timer';
+import { usePageVisible } from './view-activity';
+import { noteBackgroundMediaCallback, usePlaybackDiagnostics } from './playback-diagnostics';
 
 // One <audio> element for the whole app life: iOS keeps playing in the
 // background and on the lock screen only if the same element is reused.
@@ -35,6 +38,7 @@ type Player = PlayerState & {
   playRadio: (items: Item[], refill: () => Promise<Item[]>) => void;
   radio: boolean;
   toggle: () => void;
+  pause: () => void;
   next: () => void;
   previous: () => void;
   seek: (seconds: number) => void;
@@ -60,15 +64,21 @@ export function usePlayer() {
 }
 
 /** Re-renders with the playback position, a few times a second. */
-export function usePosition() {
+export function usePosition(enabled = true) {
   const { audio } = usePlayer();
+  const visible = usePageVisible();
   const [position, setPosition] = useState({ time: audio.currentTime, duration: audio.duration || 0 });
   useEffect(() => {
-    const update = () => setPosition({ time: audio.currentTime, duration: audio.duration || 0 });
+    if (!visible || !enabled) return;
+    const update = () => {
+      const time = audio.currentTime, duration = audio.duration || 0;
+      setPosition((before) => before.time === time && before.duration === duration ? before : { time, duration });
+    };
+    update();
     const events = ['timeupdate', 'durationchange', 'seeked', 'loadedmetadata', 'emptied'];
     events.forEach((e) => audio.addEventListener(e, update));
     return () => events.forEach((e) => audio.removeEventListener(e, update));
-  }, [audio]);
+  }, [audio, visible, enabled]);
   return position;
 }
 
@@ -87,6 +97,7 @@ const saved: Partial<PlayerState> & { playbackOrder?: number[] } = (() => {
 })();
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
+  const pageVisible = usePageVisible();
   const audio = useMemo(() => {
     const element = new Audio();
     element.preload = 'auto';
@@ -111,16 +122,31 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const order = useRef<number[]>(saved.playbackOrder ?? []); // shuffled play order of queue indexes
   const prefetched = useRef(new Map<string, Promise<Stream>>());
   const listened = useRef({ key: '', seconds: 0, last: 0 });
+  const trackingSuspended = useRef(false);
   const attempt = useRef(0);
   const skipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const failedSongs = useRef(new Set<string>());
   const wanted = useRef(false);
+  const pauseForTimer = useRef<() => void>(() => {});
+  const stopIfTimerExpired = useCallback(() => {
+    if (!consumeExpiredSleepTimer()) return false;
+    pauseForTimer.current();
+    return true;
+  }, []);
   const retryRound = useRef(0);
   const rejectedCopies = useRef<string[]>([]);
   const refill = useRef<(() => Promise<Item[]>) | null>(null);
   const [radio, setRadio] = useState(false);
   const [blindSession, setBlindSession] = useState<Player['blindSession']>(null);
   const blind = useRef<{ item: Item; seconds: number; last: number; revealed: boolean } | null>(null);
+  const watchBlind = Boolean(blindSession && !blindSession.revealed);
+  // Native media time continues while the screen is off. Reconcile at media
+  // and seek boundaries rather than entering JS on every progress event.
+  const settleListening = useCallback(() => {
+    const record = listened.current, now = audio.currentTime, step = now - record.last;
+    if (record.key && step > 0 && (trackingSuspended.current || step < 2)) record.seconds += step;
+    record.last = now;
+  }, [audio]);
 
   useEffect(() => {
     const { queue, index, shuffle, repeat, volume } = state;
@@ -154,6 +180,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   /** Reports the finished (or skipped) listen so history and recommendations learn. */
   const report = useCallback(() => {
+    settleListening();
     const { current, stream } = stateRef.current;
     const seconds = Math.round(listened.current.seconds);
     if (current && stream && seconds >= 20) {
@@ -162,10 +189,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       else api.play(current, stream.source, stream.id, seconds).catch(() => {});
     }
     listened.current = { key: '', seconds: 0, last: 0 };
-  }, []);
+  }, [settleListening]);
 
   const load = useCallback(
     async (queue: Item[], index: number, autoplay = true, rejected: string[] = [], resumeAt = 0, automatic = false) => {
+      if (stopIfTimerExpired() && automatic) return;
       if (automatic && !wanted.current) return;
       if (!automatic) wanted.current = autoplay;
       if (skipTimer.current !== null) { clearTimeout(skipTimer.current); skipTimer.current = null; }
@@ -184,6 +212,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       try {
         const stream = await resolve(item, rejected);
         if (token !== attempt.current) return;
+        if (stopIfTimerExpired()) return;
         audio.src = stream.url;
         if (resumeAt) audio.currentTime = resumeAt;
         setState((s) => ({ ...s, stream, loading: false }));
@@ -232,13 +261,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [state.index, state.queue, resolve]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    settleListening();
+    trackingSuspended.current = !(pageVisible || watchBlind);
     const onPlay = () => setState((s) => ({ ...s, playing: true }));
-    const onPause = () => setState((s) => ({ ...s, playing: false }));
+    const onPause = () => { settleListening(); setState((s) => ({ ...s, playing: false })); };
     const onTime = () => {
+      noteBackgroundMediaCallback();
+      settleListening();
       const now = audio.currentTime;
-      const step = now - listened.current.last;
-      if (step > 0 && step < 2) listened.current.seconds += step;
-      listened.current.last = now;
       const session = blind.current;
       const current = stateRef.current.current;
       if (!session || session.revealed || !current || keyOf(session.item) !== keyOf(current)) return;
@@ -253,13 +283,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         }
       }
     };
-    const resetBlindPosition = () => { if (blind.current) blind.current.last = audio.currentTime; };
+    const resetBlindPosition = () => { listened.current.last = audio.currentTime; if (blind.current) blind.current.last = audio.currentTime; };
     const onEnded = () => {
+      if (stopIfTimerExpired()) return;
       const s = stateRef.current;
       if (!wanted.current) return;
       if (s.repeat === 'one' || s.queue.length === 1) {
         report();
         audio.currentTime = 0;
+        listened.current = { key: s.current ? keyOf(s.current) : '', seconds: 0, last: 0 };
         const token=attempt.current;
         audio.play().catch(() => {if(token===attempt.current&&wanted.current)load(s.queue,s.index,true,[],0,true);});
         return;
@@ -279,7 +311,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     };
     audio.addEventListener('play', onPlay);
     audio.addEventListener('pause', onPause);
-    audio.addEventListener('timeupdate', onTime);
+    if (!trackingSuspended.current) audio.addEventListener('timeupdate', onTime);
     audio.addEventListener('ended', onEnded);
     audio.addEventListener('error', onError);
     for (const event of ['play', 'pause', 'seeking', 'seeked', 'loadedmetadata']) audio.addEventListener(event, resetBlindPosition);
@@ -291,7 +323,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       audio.removeEventListener('error', onError);
       for (const event of ['play', 'pause', 'seeking', 'seeked', 'loadedmetadata']) audio.removeEventListener(event, resetBlindPosition);
     };
-  }, [audio, load, report]);
+  }, [audio, load, report, settleListening, pageVisible, watchBlind]);
 
   const play = useCallback(
     (items: Item[], index = 0) => {
@@ -361,6 +393,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if(skipTimer.current!==null){clearTimeout(skipTimer.current);skipTimer.current=null;}
     audio.pause();setState(v=>({...v,loading:false,playing:false}));
   },[audio]);
+  pauseForTimer.current = pause;
+  useSleepTimerPlayback(audio, stopIfTimerExpired);
   const resume = useCallback(()=>{
     const s=stateRef.current;if(!s.current||wanted.current&&(s.loading||!audio.paused))return;
     wanted.current=true;const token=attempt.current;
@@ -385,19 +419,22 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const previous = useCallback(() => {
     const s = stateRef.current;
     if (audio.currentTime > 4) {
+      settleListening();
       audio.currentTime = 0;
+      listened.current.last = 0;
       return;
     }
     const position = s.shuffle ? order.current.indexOf(s.index) : s.index;
     const prev = s.shuffle ? order.current[position - 1] : s.index - 1;
     if (prev !== undefined && prev >= 0) load(s.queue, prev);
-    else audio.currentTime = 0;
-  }, [audio, load]);
+    else { settleListening(); audio.currentTime = 0; listened.current.last = 0; }
+  }, [audio, load, settleListening]);
 
   const seek = useCallback((seconds: number) => {
+    settleListening();
     if (Number.isFinite(seconds)) audio.currentTime = Math.max(0, seconds);
     listened.current.last = audio.currentTime;
-  }, [audio]);
+  }, [audio, settleListening]);
 
   const jump = useCallback((index: number) => load(stateRef.current.queue, index), [load]);
 
@@ -465,12 +502,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     : state.current, [concealed, state.current]);
   useMediaSession({ ...state, current: presentation }, audio, { toggle, pause, resume, next, previous, seek });
   useDesktopLyrics(state.current, audio, concealed);
+  usePlaybackDiagnostics(audio, state.stream);
   const playbackOrder = useMemo(() => state.shuffle && order.current.length === state.queue.length
     ? [...order.current] : state.queue.map((_, index) => index), [state.queue, state.index, state.shuffle]);
 
   const value = useMemo<Player>(
-    () => ({ ...state, playbackOrder, presentation, blindSession, playBlind, revealBlind, audio, radio, play, playRadio, toggle, next, previous, seek, jump, playNext, addToQueue, removeAt, moveUpcoming, setShuffle, cycleRepeat, setVolume, toggleMute }),
-    [state, playbackOrder, presentation, blindSession, playBlind, revealBlind, audio, radio, play, playRadio, toggle, next, previous, seek, jump, playNext, addToQueue, removeAt, moveUpcoming, setShuffle, cycleRepeat, setVolume, toggleMute],
+    () => ({ ...state, playbackOrder, presentation, blindSession, playBlind, revealBlind, audio, radio, play, playRadio, toggle, pause, next, previous, seek, jump, playNext, addToQueue, removeAt, moveUpcoming, setShuffle, cycleRepeat, setVolume, toggleMute }),
+    [state, playbackOrder, presentation, blindSession, playBlind, revealBlind, audio, radio, play, playRadio, toggle, pause, next, previous, seek, jump, playNext, addToQueue, removeAt, moveUpcoming, setShuffle, cycleRepeat, setVolume, toggleMute],
   );
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import { reduceMotion } from './preferences';
+import { usePageVisible } from './view-activity';
 
 type Position = { x: number; y: number; w: number; h: number };
 const position = (r: DOMRect): Position => ({ x: r.x, y: r.y, w: r.width, h: r.height });
@@ -17,6 +18,7 @@ export function useArtworkFlight(open: boolean, track: string, playing: boolean,
   useLayoutEffect(() => {
     const before = previous.current;
     previous.current = { open, track };
+    if (document.hidden || document.documentElement.hasAttribute('data-page-hidden') || !open && !before.open) { active.current?.finish(); return; }
     const small = document.querySelector<HTMLElement>('.mini-song .cover');
     const large = art.current?.querySelector<HTMLElement>('.np-art-current');
     const destination = () => {
@@ -107,13 +109,17 @@ export function useArtworkFlight(open: boolean, track: string, playing: boolean,
     window.addEventListener('music-preferences-change', finish);
     document.addEventListener('visibilitychange', visibility);
     window.addEventListener('resize', finish);
-    return () => { finish(); reduced.removeEventListener('change', finish); window.removeEventListener('music-preferences-change', finish); document.removeEventListener('visibilitychange', visibility); window.removeEventListener('resize', finish); };
+    window.addEventListener('blur', finish);
+    window.addEventListener('pagehide', finish);
+    document.addEventListener('freeze', finish);
+    return () => { finish(); reduced.removeEventListener('change', finish); window.removeEventListener('music-preferences-change', finish); document.removeEventListener('visibilitychange', visibility); window.removeEventListener('resize', finish); window.removeEventListener('blur', finish); window.removeEventListener('pagehide', finish); document.removeEventListener('freeze', finish); };
   }, []);
 }
 
 /** Reveal complete editorial blocks, not every row. Nothing is hidden while
  * waiting for JavaScript, and no animation delays a click or data request. */
 export function usePageMotion(main: HTMLElement | null, path: string) {
+  const visible = usePageVisible();
   const seen = useRef(new WeakSet<Element>());
   const input = useRef<'pointer' | 'keyboard'>('pointer');
   useEffect(() => {
@@ -124,7 +130,8 @@ export function usePageMotion(main: HTMLElement | null, path: string) {
     return () => { document.removeEventListener('pointerdown', pointer, true); document.removeEventListener('keydown', keyboard, true); };
   }, []);
   useEffect(() => {
-    if (!main) return;
+    if (!main || !visible) return;
+    const surface = main.querySelector('[data-route-active="true"]') ?? main;
     const animations = new Set<Animation>();
     const selector = '.crate, .section, .blind, .gazette, .arrivals, .collection-header, .chart-head, .podium, .song-list, .settings-group, .search-field';
     let pending = 0;
@@ -134,7 +141,7 @@ export function usePageMotion(main: HTMLElement | null, path: string) {
         node.classList.toggle('motion-offscreen', !entry.isIntersecting);
         if (!entry.isIntersecting || seen.current.has(node)) continue;
         seen.current.add(node);
-        if (reduceMotion() || input.current === 'keyboard') continue;
+        if (document.hidden || reduceMotion() || input.current === 'keyboard') continue;
         const animation = node.animate([
           { opacity: 0.75, transform: 'translate3d(0,6px,0)' },
           { opacity: 1, transform: 'translate3d(0,0,0)' },
@@ -146,16 +153,20 @@ export function usePageMotion(main: HTMLElement | null, path: string) {
     const observed = new Set<Element>();
     const scan = () => {
       pending = 0;
-      for (const node of observed) if (!main.contains(node)) { observer.unobserve(node); observed.delete(node); }
-      main.querySelectorAll(selector).forEach((node) => {
+      for (const node of observed) if (!surface.contains(node)) { observer.unobserve(node); observed.delete(node); }
+      surface.querySelectorAll(selector).forEach((node) => {
         if (node.matches('.song-list') && node.parentElement?.closest('.section')) return;
         if (!observed.has(node)) { observed.add(node); observer.observe(node); }
       });
     };
-    const mutations = new MutationObserver(() => { if (!pending) pending = requestAnimationFrame(scan); });
-    mutations.observe(main, { childList: true, subtree: true });
+    const mutations = new MutationObserver(() => { if (!document.hidden && !document.documentElement.hasAttribute('data-page-hidden') && !pending) pending = requestAnimationFrame(scan); });
+    mutations.observe(surface, { childList: true, subtree: true });
     scan();
-    const visibility = () => main.closest('.frame')?.classList.toggle('motion-document-hidden', document.hidden);
+    const visibility = () => {
+      main.closest('.frame')?.classList.toggle('motion-document-hidden', document.hidden);
+      if (document.hidden) { cancelAnimationFrame(pending); pending = 0; animations.forEach((animation) => animation.cancel()); }
+      else scan();
+    };
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     const simplify = () => { if (reduceMotion()) animations.forEach((a) => a.cancel()); };
     reduced.addEventListener('change', simplify);
@@ -167,5 +178,5 @@ export function usePageMotion(main: HTMLElement | null, path: string) {
       document.removeEventListener('visibilitychange', visibility); reduced.removeEventListener('change', simplify);
       window.removeEventListener('music-preferences-change', simplify);
     };
-  }, [main, path]);
+  }, [main, path, visible]);
 }

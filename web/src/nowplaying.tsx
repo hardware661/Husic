@@ -7,6 +7,7 @@ import { useArtworkFlight } from './motion';
 import { usePlayer, usePosition } from './player';
 import { Volume } from './shell';
 import { reduceMotion } from './preferences';
+import { usePageVisible } from './view-activity';
 
 type Pane = 'lyrics' | 'queue' | 'cover';
 
@@ -15,8 +16,18 @@ export function NowPlaying({ open, onClose }: { open: boolean; onClose: () => vo
   const player = usePlayer();
   const { presentation: current } = player;
   const concealed = player.current !== current;
+  const pageVisible = usePageVisible();
+  const [retained, setRetained] = useState(open);
+  useEffect(() => {
+    if (open) { setRetained(true); return; }
+    const timer = setTimeout(() => setRetained(false), 520);
+    return () => clearTimeout(timer);
+  }, [open]);
   const [pane, setPane] = useState<Pane>(() => (window.matchMedia('(min-width: 761px)').matches ? 'lyrics' : 'cover'));
-  const drag = useRef<{ id: number; x: number; y: number; dy: number; offset: number; active: boolean; lastY: number; lastTime: number; velocity: number; target: HTMLElement } | null>(null);
+  const [phone, setPhone] = useState(() => matchMedia('(max-width: 760px)').matches);
+  const openRef = useRef(open); openRef.current = open;
+  const suppressArtworkTap = useRef(0);
+  const drag = useRef<{ id: number; x: number; y: number; axis: 'x' | 'y'; dy: number; offset: number; active: boolean; lastY: number; lastTime: number; velocity: number; target: HTMLElement } | null>(null);
   const sheet = useRef<HTMLDivElement>(null);
   const art = useRef<HTMLDivElement>(null);
   const settle = useRef<Animation | null>(null);
@@ -24,7 +35,7 @@ export function NowPlaying({ open, onClose }: { open: boolean; onClose: () => vo
   const track = current ? `${current.title}|${current.artists.join('|')}|${current.cover}` : '';
   useEffect(() => {
     const mobile = matchMedia('(max-width: 760px)');
-    const update = () => { if (!mobile.matches) setPane((value) => value === 'cover' ? 'lyrics' : value); };
+    const update = () => { setPhone(mobile.matches); if (!mobile.matches) setPane((value) => value === 'cover' ? 'lyrics' : value); };
     mobile.addEventListener('change', update);
     return () => mobile.removeEventListener('change', update);
   }, []);
@@ -35,6 +46,7 @@ export function NowPlaying({ open, onClose }: { open: boolean; onClose: () => vo
     settle.current = null;
     const pending = drag.current; drag.current = null;
     if (pending?.target.hasPointerCapture(pending.id)) pending.target.releasePointerCapture(pending.id);
+    delete sheet.current.dataset.dismissed; delete sheet.current.dataset.dismissing; delete sheet.current.dataset.dragging;
     sheet.current.style.transform = sheet.current.style.opacity = sheet.current.style.borderRadius = '';
   }, [open]);
   useArtworkFlight(open, track, player.playing || player.loading, art);
@@ -43,7 +55,11 @@ export function NowPlaying({ open, onClose }: { open: boolean; onClose: () => vo
       const pending = drag.current; drag.current = null;
       if (pending?.target.hasPointerCapture(pending.id)) pending.target.releasePointerCapture(pending.id);
       settle.current?.cancel(); settle.current = null;
-      if (sheet.current) sheet.current.style.transform = sheet.current.style.opacity = sheet.current.style.borderRadius = '';
+      if (sheet.current) {
+        if (!openRef.current) sheet.current.dataset.dismissed = '';
+        delete sheet.current.dataset.dismissing; delete sheet.current.dataset.dragging;
+        sheet.current.style.transform = sheet.current.style.opacity = sheet.current.style.borderRadius = '';
+      }
     };
     const hidden = () => { if (document.hidden) cancel(); };
     window.addEventListener('blur', cancel);
@@ -57,7 +73,7 @@ export function NowPlaying({ open, onClose }: { open: boolean; onClose: () => vo
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !pageVisible) return;
     const previousFocus = document.activeElement;
     const frame = requestAnimationFrame(() => sheet.current?.querySelector<HTMLButtonElement>('[aria-label="收起"]')?.focus({ preventScroll: true }));
     const onKey = (e: KeyboardEvent) => {
@@ -73,43 +89,49 @@ export function NowPlaying({ open, onClose }: { open: boolean; onClose: () => vo
     return () => {
       cancelAnimationFrame(frame); document.removeEventListener('keydown', onKey);
       const target = previousFocus instanceof HTMLElement && !sheet.current?.contains(previousFocus) ? previousFocus : document.querySelector<HTMLElement>('.mini-song');
-      target?.focus({ preventScroll: true });
+      if (!document.hidden && !document.documentElement.hasAttribute('data-page-hidden')) target?.focus({ preventScroll: true });
     };
-  }, [open, onClose]);
+  }, [open, onClose, pageVisible]);
 
-  if (!current) return null;
+  if (!current || !pageVisible || !(open || retained)) return null;
 
   // The cover and free space are grab surfaces; controls and scrolling panes
   // keep their own gestures. Intent is decided before a vertical pull begins.
   const onPointerDown = (e: ReactPointerEvent) => {
     const target = e.target as HTMLElement;
+    const edge = Boolean(target.closest('.np-edge-back'));
     if (!open || e.pointerType === 'mouse' || !e.isPrimary || drag.current || !matchMedia('(max-width: 760px)').matches
-      || !target.closest('.np-top,.np-main') || target.closest('button,input,a,[role="button"],.np-side,.menu')) return;
-    const offset = Math.max(0, sheet.current?.getBoundingClientRect().top ?? 0);
-    drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, dy: offset, offset, active: false, lastY: e.clientY, lastTime: performance.now(), velocity: 0, target: e.currentTarget as HTMLElement };
+      || !edge && (!target.closest('.np-top,.np-main') || (target.closest('button,input,a,[role="button"],.np-side,.menu') && !target.closest('.np-art')))) return;
+    const offset = edge ? 0 : Math.max(0, sheet.current?.getBoundingClientRect().top ?? 0);
+    drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, axis: edge ? 'x' : 'y', dy: offset, offset, active: false, lastY: edge ? e.clientX : e.clientY, lastTime: performance.now(), velocity: 0, target: e.currentTarget as HTMLElement };
   };
   const onPointerMove = (e: ReactPointerEvent) => {
     if (!drag.current || e.pointerId !== drag.current.id || !sheet.current) return;
     const state = drag.current;
-    const dx = e.clientX - state.x, dy = e.clientY - state.y;
+    const horizontal = state.axis === 'x';
+    const dx = horizontal ? e.clientY - state.y : e.clientX - state.x;
+    const dy = horizontal ? e.clientX - state.x : e.clientY - state.y;
     if (!state.active) {
-      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.15) { drag.current = null; return; }
+      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.15) { suppressArtworkTap.current = performance.now() + 400; drag.current = null; return; }
       if (Math.abs(dy) < 8 || Math.abs(dy) < Math.abs(dx) * 1.15) return;
       state.active = true;
-      state.offset = Math.max(0, sheet.current.getBoundingClientRect().top);
-      const opacity = getComputedStyle(sheet.current).opacity;
+      state.offset = horizontal ? 0 : Math.max(0, sheet.current.getBoundingClientRect().top);
       settle.current?.cancel(); settle.current = null;
-      sheet.current.style.opacity = opacity;
+      sheet.current.dataset.dragging = '';
+      sheet.current.style.opacity = '1';
       state.target.setPointerCapture(e.pointerId);
     }
     e.preventDefault();
     const now = performance.now();
-    state.velocity = state.velocity * 0.35 + (e.clientY - state.lastY) / Math.max(1, now - state.lastTime) * 0.65;
-    state.lastY = e.clientY; state.lastTime = now;
+    const point = horizontal ? e.clientX : e.clientY;
+    state.velocity = state.velocity * 0.35 + (point - state.lastY) / Math.max(1, now - state.lastTime) * 0.65;
+    state.lastY = point; state.lastTime = now;
     const raw = dy + state.offset;
     state.dy = raw < 0 ? raw * 0.15 / (1 + Math.abs(raw) / Math.max(1, innerHeight)) : raw;
-    sheet.current.style.transform = `translate3d(0,${state.dy}px,0)`;
-    sheet.current.style.opacity = `${1 - Math.min(0.42, Math.max(0, state.dy) / innerHeight)}`;
+    sheet.current.style.transform = horizontal ? `translate3d(${Math.max(0, state.dy)}px,0,0)` : `translate3d(0,${state.dy}px,0)`;
+    // An opaque moving surface avoids WebKit blending the blurred backdrop
+    // into a large grey tile while the sheet is leaving.
+    sheet.current.style.opacity = '1';
     sheet.current.style.borderRadius = `${Math.min(28, Math.max(0, state.dy) * 0.18)}px`;
   };
   const onPointerUp = (e: ReactPointerEvent) => {
@@ -117,18 +139,39 @@ export function NowPlaying({ open, onClose }: { open: boolean; onClose: () => vo
     // Touch starts with implicit capture on the image/child. Transferring it
     // to the sheet emits a child lostpointercapture, not a cancelled gesture.
     if (e.type === 'lostpointercapture' && e.target !== drag.current.target) return;
-    const { dy, lastTime, active, target } = drag.current;
+    const { dy, lastTime, active, target, axis } = drag.current;
     const velocity = performance.now() - lastTime > 90 ? 0 : drag.current.velocity;
-    const dismiss = active && e.type === 'pointerup' && (dy > Math.min(120, innerHeight * 0.2) || dy > 24 && velocity > 0.55);
+    const dismiss = active && e.type === 'pointerup' && (dy > (axis === 'x' ? Math.min(96, innerWidth * .25) : Math.min(120, innerHeight * 0.2)) || dy > (axis === 'x' ? 48 : 24) && velocity > 0.55);
     drag.current = null;
     if (target.hasPointerCapture(e.pointerId)) target.releasePointerCapture(e.pointerId);
     if (!active) return;
+    suppressArtworkTap.current = performance.now() + 400;
     const node = sheet.current;
     const reset = () => { node.style.transform = node.style.opacity = node.style.borderRadius = ''; };
-    if (dismiss) {
-      // Keep the live drag position for the artwork spring's return path.
-      settle.current = node.animate([{ opacity: node.style.opacity || '1' }, { opacity: 0 }], { duration: reduceMotion() ? 0 : 320, easing: 'ease-out', fill: 'forwards' });
-      onClose(); clearDrag.current = setTimeout(() => { settle.current?.cancel(); settle.current = null; reset(); }, 520);
+    if (dismiss && axis === 'x' && pane !== 'cover') {
+      // Lyrics/queue are a subview; the next edge swipe closes the player.
+      setPane('cover');
+      delete node.dataset.dragging; reset();
+    } else if (dismiss) {
+      delete node.dataset.dragging;
+      node.dataset.dismissing = '';
+      const height = Math.max(innerHeight, visualViewport?.height || 0);
+      const animation = node.animate([
+        { transform: node.style.transform || 'none', opacity: 1 },
+        { transform: axis === 'x' ? `translate3d(${innerWidth}px,0,0)` : 'translate3d(0,' + height + 'px,0)', opacity: 1 },
+      ], { duration: reduceMotion() ? 0 : 300, easing: 'cubic-bezier(.22,.7,.3,1)', fill: 'forwards' });
+      settle.current = animation;
+      const finish = () => {
+        if (settle.current !== animation) return;
+        // Hide before cancelling/resetting transforms. Never fade a reset,
+        // full-screen blur layer back over the page in WebKit.
+        node.dataset.dismissed = '';
+        delete node.dataset.dismissing;
+        reset(); animation.cancel(); settle.current = null;
+      };
+      animation.onfinish = finish;
+      clearDrag.current = setTimeout(finish, 450);
+      onClose();
     } else {
       const animation = node.animate([
         { transform: node.style.transform || 'none', opacity: node.style.opacity || '1', borderRadius: node.style.borderRadius || '0px' },
@@ -136,7 +179,7 @@ export function NowPlaying({ open, onClose }: { open: boolean; onClose: () => vo
         { transform: 'none', opacity: 1, borderRadius: '0px' },
       ], { duration: reduceMotion() ? 0 : 320, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'forwards' });
       settle.current = animation;
-      animation.onfinish = () => { if (settle.current !== animation) return; reset(); animation.cancel(); settle.current = null; };
+      animation.onfinish = () => { if (settle.current !== animation) return; delete node.dataset.dragging; reset(); animation.cancel(); settle.current = null; };
     }
   };
 
@@ -145,6 +188,7 @@ export function NowPlaying({ open, onClose }: { open: boolean; onClose: () => vo
       onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onLostPointerCapture={onPointerUp}>
       <ArtworkBackdrop src={current.cover} />
       <div className="np-shade" />
+      <div className="np-edge-back" aria-hidden="true" />
       <header className="np-top">
         <button className="icon-button" aria-label="收起" onClick={onClose}>
           <Icon name="down" size={24} />
@@ -154,7 +198,7 @@ export function NowPlaying({ open, onClose }: { open: boolean; onClose: () => vo
       </header>
       <div className={`np-body pane-${pane}`}>
         <section className="np-main">
-          <PlayingArtwork src={current.cover} playing={player.playing || player.loading} artRef={art} />
+          <PlayingArtwork src={current.cover} playing={player.playing || player.loading} artRef={art} onActivate={phone ? () => { if (performance.now() >= suppressArtworkTap.current) setPane('lyrics'); } : undefined} />
           <div className="np-meta">
             <div className="song-text" key={track}>
               <strong>{current.title}</strong>
@@ -170,7 +214,7 @@ export function NowPlaying({ open, onClose }: { open: boolean; onClose: () => vo
             <Volume />
           </div>
         </section>
-        <section className="np-side">{concealed ? <div className="lyrics lyrics-state">先用耳朵认识它，听满 8 秒再揭晓。</div> : pane === 'queue' ? <QueuePane /> : <LyricsPane visible={open && pane !== 'cover'} />}</section>
+        <section className="np-side">{(!phone || pane !== 'cover') && (concealed ? <div className="lyrics lyrics-state" onClick={() => phone && setPane('cover')}>先用耳朵认识它，听满 8 秒再揭晓。</div> : pane === 'queue' ? <QueuePane /> : <LyricsPane visible={open} onBack={phone ? () => setPane('cover') : undefined} />)}</section>
       </div>
       <footer className="np-tabs" aria-label="播放页视图">
         <button className={pane === 'lyrics' ? 'is-on' : ''} aria-label="歌词" aria-pressed={pane === 'lyrics'} onClick={() => setPane(pane === 'lyrics' && matchMedia('(max-width: 760px)').matches ? 'cover' : 'lyrics')}>
@@ -228,7 +272,7 @@ function ArtworkBackdrop({ src }: { src: string }) {
   </>;
 }
 
-function PlayingArtwork({ src, playing, artRef }: { src: string; playing: boolean; artRef: RefObject<HTMLDivElement | null> }) {
+function PlayingArtwork({ src, playing, artRef, onActivate }: { src: string; playing: boolean; artRef: RefObject<HTMLDivElement | null>; onActivate?: () => void }) {
   // Keep the old image mounted until its actual on-screen scale can be sampled.
   // A leaving cover never starts a second pause/play zoom during its fade.
   const [shown, setShown] = useState(src);
@@ -244,7 +288,7 @@ function PlayingArtwork({ src, playing, artRef }: { src: string; playing: boolea
     const timer = setTimeout(() => setPrevious(null), 650);
     return () => clearTimeout(timer);
   }, [previous]);
-  return <div className="np-art" ref={artRef} style={{ ['--leaving-art-transform' as string]: previous?.transform || 'none' }}>
+  return <div className="np-art" ref={artRef} role={onActivate ? 'button' : undefined} tabIndex={onActivate ? 0 : undefined} aria-label={onActivate ? '查看歌词' : undefined} onClick={onActivate} onKeyDown={(event) => { if (onActivate && ['Enter', ' '].includes(event.key)) { event.preventDefault(); onActivate(); } }} style={{ ['--leaving-art-transform' as string]: previous?.transform || 'none' }}>
     {previous && <Cover key={previous.src} src={previous.src} size={600} eager className="np-art-previous np-art-frozen" />}
     <Cover key={shown} src={shown} size={600} eager className={`np-art-current${playing ? ' is-playing' : ''}`} />
   </div>;
@@ -330,7 +374,7 @@ function QualityBadge() {
   return quality ? <span className="np-quality" aria-label={`音质：${quality}`}>{quality}</span> : <span aria-hidden="true" />;
 }
 
-function LyricsPane({ visible }: { visible: boolean }) {
+function LyricsPane({ visible, onBack }: { visible: boolean; onBack?: () => void }) {
   const { current, audio, seek, playing } = usePlayer();
   const [lyrics, setLyrics] = useState<Lyrics | null>(null);
   const [active, setActive] = useState(-1);
@@ -339,6 +383,7 @@ function LyricsPane({ visible }: { visible: boolean }) {
   const userScroll = useRef(0);
   const scrollFrame = useRef(0);
   const scrollVelocity = useRef(0);
+  const suppressTap = useRef(0);
 
   useEffect(() => {
     if (!current) return;
@@ -356,49 +401,59 @@ function LyricsPane({ visible }: { visible: boolean }) {
 
   const lines = useMemo(() => lyrics?.lines ?? [], [lyrics]);
 
-  // Follow the music: current line, and word fill for word-timed lyrics.
+  // Native media events drive line-only lyrics. Frames are only needed for
+  // the currently visible, playing word fill; paused text has no idle loop.
   useEffect(() => {
     if (!visible || !lyrics?.synced || lines.length === 0) return;
-    setInterlude(false);
-    let frame = 0;
-    let last = -1;
-    let lastTick = 0;
-    let gap = false;
-    const tick = (now: number) => {
-      if (document.hidden) { frame = 0; return; }
-      // Word fills need no React renders; 30 Hz is plenty for small text.
-      if (now - lastTick < (reduceMotion() ? 120 : 32)) { frame = requestAnimationFrame(tick); return; }
-      lastTick = now;
+    let frame = 0, last = -1, lastTick = 0, gap = false;
+    let lineTimer: ReturnType<typeof setTimeout> | undefined;
+    const update = () => {
       const ms = audio.currentTime * 1000 + 120;
       let index = -1;
       for (let i = 0; i < lines.length && lines[i].t <= ms; i++) index = i;
-      if (index !== last) {
-        last = index;
-        setActive(index);
-      }
-      const line = index >= 0 ? lines[index] : null;
-      const next = lines[index + 1];
-      // Line-only LRC cannot tell when singing ends. Only a word-timed end
-      // (or a known delayed first line) can safely identify an instrumental gap.
+      if (index !== last) { last = index; setActive(index); }
+      const line = index >= 0 ? lines[index] : null, next = lines[index + 1];
       const wordEnd = line?.words?.length ? Math.max(...line.words.map((w) => w.t + w.d)) : null;
-      const isGap = Boolean(next && (index < 0
-        ? next.t > 6000 && next.t - ms > 900
+      const isGap = Boolean(next && (index < 0 ? next.t > 6000 && next.t - ms > 900
         : wordEnd !== null && next.t - wordEnd > 6000 && ms > wordEnd + 650 && next.t - ms > 900));
       if (isGap !== gap) { gap = isGap; setInterlude(isGap); }
       if (line?.words && box.current) {
-        const spans = box.current.querySelectorAll<HTMLSpanElement>(`[data-index="${index}"] .word`);
-        line.words.forEach((w, i) => {
-          const p = Math.max(0, Math.min(1, (ms - w.t) / Math.max(1, w.d)));
-          spans[i]?.style.setProperty('--p', `${p * 100}%`);
+        const spans = box.current.querySelectorAll<HTMLSpanElement>('[data-index="' + index + '"] .word');
+        line.words.forEach((word, i) => {
+          const progress = Math.max(0, Math.min(1, (ms - word.t) / Math.max(1, word.d)));
+          const fill = Math.round(progress * 10000) / 100 + '%';
+          if (spans[i] && spans[i].style.getPropertyValue('--p') !== fill) spans[i].style.setProperty('--p', fill);
         });
+      }
+      return Boolean(line?.words?.length);
+    };
+    const stop = () => { cancelAnimationFrame(frame); frame = 0; clearTimeout(lineTimer); };
+    const tick = (now: number) => {
+      frame = 0;
+      if (document.hidden || audio.paused || !playing) return;
+      if (now - lastTick >= (reduceMotion() ? 120 : 32)) {
+        lastTick = now;
+        if (!update()) return;
       }
       frame = requestAnimationFrame(tick);
     };
-    const resume = () => { if (!document.hidden && !frame) frame = requestAnimationFrame(tick); };
-    document.addEventListener('visibilitychange', resume);
-    frame = requestAnimationFrame(tick);
-    return () => { cancelAnimationFrame(frame); document.removeEventListener('visibilitychange', resume); };
-  }, [visible, lyrics, lines, audio]);
+    const pulse = () => {
+      stop();
+      if (document.hidden) return;
+      const wordTimed = update();
+      if (audio.paused || !playing) return;
+      if (wordTimed) frame = requestAnimationFrame(tick);
+      else {
+        const next = lines[last + 1];
+        if (next) lineTimer = setTimeout(pulse, Math.max(16, (next.t - audio.currentTime * 1000 - 120) / Math.max(.1, audio.playbackRate || 1)));
+      }
+    };
+    const events = ['timeupdate', 'seeked', 'seeking', 'play', 'pause', 'ratechange'];
+    events.forEach((event) => audio.addEventListener(event, pulse));
+    document.addEventListener('visibilitychange', pulse);
+    setInterlude(false); pulse();
+    return () => { stop(); events.forEach((event) => audio.removeEventListener(event, pulse)); document.removeEventListener('visibilitychange', pulse); };
+  }, [visible, lyrics, lines, audio, playing]);
 
   useEffect(() => {
     if (!visible || active < 0 || !box.current || Date.now() - userScroll.current < 2500) return;
@@ -425,13 +480,14 @@ function LyricsPane({ visible }: { visible: boolean }) {
     return () => cancelAnimationFrame(scrollFrame.current);
   }, [active, visible]);
 
-  const manualScroll = () => { userScroll.current = Date.now(); cancelAnimationFrame(scrollFrame.current); scrollVelocity.current = 0; };
+  const manualScroll = () => { suppressTap.current = performance.now() + 400; userScroll.current = Date.now(); cancelAnimationFrame(scrollFrame.current); scrollVelocity.current = 0; };
+  const tapBack = () => { if (performance.now() >= suppressTap.current) onBack?.(); };
   const gapIndicator = <span className={`lyric-interlude${playing ? '' : ' is-paused'}`} role="status" aria-label="间奏"><i /><i /><i /></span>;
 
-  if (!lyrics) return <div className="lyrics lyrics-state">正在找歌词…</div>;
-  if (lines.length === 0) return <div className="lyrics lyrics-state">这首歌暂时没有歌词</div>;
+  if (!lyrics) return <div className="lyrics lyrics-state" onClick={tapBack}>正在找歌词…</div>;
+  if (lines.length === 0) return <div className="lyrics lyrics-state" onClick={tapBack}>这首歌暂时没有歌词</div>;
   return (
-    <div className={`lyrics${lyrics.synced ? '' : ' is-plain'}`} ref={box} onWheel={manualScroll} onTouchMove={manualScroll}>
+    <div className={`lyrics${lyrics.synced ? '' : ' is-plain'}`} ref={box} onWheel={manualScroll} onTouchMove={manualScroll} onClick={tapBack}>
       <div className="lyrics-pad" />
       {interlude && active < 0 && gapIndicator}
       {lines.map((line, i) => (
@@ -440,7 +496,7 @@ function LyricsPane({ visible }: { visible: boolean }) {
           data-index={i}
           data-depth={lyrics.synced && active >= 0 ? Math.min(4, Math.abs(i - active)) : undefined}
           className={`lyric${i === active ? ' is-active' : ''}${i < active ? ' is-past' : ''}`}
-          onClick={() => lyrics.synced && seek(line.t / 1000)}
+          onClick={() => !onBack && lyrics.synced && seek(line.t / 1000)}
         >
           {i === active && line.words ? (
             line.words.map((w, j) => (

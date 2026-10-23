@@ -4,6 +4,7 @@ import { cachedCharts, cachedRanking, chartKey, loadCharts, loadRanking, warmRan
 import { Bars, Cover, Empty, Heart, PageHeader, SongMenu, sameItem } from './components';
 import { usePlayer } from './player';
 import { navigate, query, usePath } from './router';
+import { usePageVisible } from './view-activity';
 
 // Charts: pick a platform, then one of its rankings. Number one gets a large
 // card, two and three a smaller pair beside it; the rest are a numbered list.
@@ -23,6 +24,7 @@ function tabKeys(e: KeyboardEvent<HTMLDivElement>) {
 
 export function Charts() {
   const path = usePath();
+  const pageVisible = usePageVisible();
   const [charts, setCharts] = useState<Chart[]>(cachedCharts);
   const [answer, setAnswer] = useState<RankingData | null>(null);
   const [errorKey, setErrorKey] = useState('');
@@ -50,7 +52,12 @@ export function Charts() {
     };
   }, [selected, key, retry]);
   const ready = Boolean(data);
-  useEffect(() => { if (ready && charts.length) void warmRankings(charts); }, [ready, charts]);
+  useEffect(() => {
+    if (!ready || !pageVisible || !charts.length || !matchMedia('(min-width: 761px) and (hover: hover) and (pointer: fine)').matches) return;
+    let active = true;
+    void warmRankings(charts, () => active);
+    return () => { active = false; };
+  }, [ready, pageVisible, charts]);
   const choose = (c: Chart) => navigate(`/charts?c=${c.source}:${c.id}`, true);
   const ofPlatform = charts.filter((c) => c.source === selected?.source);
   useLayoutEffect(() => {
@@ -86,8 +93,8 @@ export function Charts() {
               const first = charts.find((c) => c.source === p && c.short === selected?.short) ?? charts.find((c) => c.source === p);
               if (first) choose(first);
             }}
-            onPointerEnter={() => { const first = charts.find((c) => c.source === p); if (first) void loadRanking(first).catch(() => {}); }}
-            onFocus={() => { const first = charts.find((c) => c.source === p); if (first) void loadRanking(first).catch(() => {}); }}
+            onPointerEnter={(event) => { const first = charts.find((c) => c.source === p); if (event.pointerType === 'mouse' && first) void loadRanking(first).catch(() => {}); }}
+            onFocus={(event) => { const first = charts.find((c) => c.source === p); if (event.currentTarget.matches(':focus-visible') && first) void loadRanking(first).catch(() => {}); }}
           >
             {sourceNames[p]}
           </button>
@@ -96,7 +103,7 @@ export function Charts() {
       <div className="chart-editions" ref={editions} role="tablist" aria-label="榜单" onKeyDown={(event) => { event.currentTarget.dataset.keyboard = 'true'; tabKeys(event); }} onPointerDown={(event) => { event.currentTarget.dataset.keyboard = 'false'; }}>
         <span className="chart-edition-indicator" aria-hidden="true" />
         {ofPlatform.map((c, i) => (
-          <button key={c.id} id={`chart-tab-${c.source}-${c.id}`} role="tab" aria-label={c.short} aria-controls="ranking-panel" aria-selected={c === selected} tabIndex={c === selected ? 0 : -1} className={c === selected ? 'is-on' : ''} onClick={() => choose(c)} onPointerEnter={() => { void loadRanking(c).catch(() => {}); }} onFocus={() => { void loadRanking(c).catch(() => {}); }}>
+          <button key={c.id} id={`chart-tab-${c.source}-${c.id}`} role="tab" aria-label={c.short} aria-controls="ranking-panel" aria-selected={c === selected} tabIndex={c === selected ? 0 : -1} className={c === selected ? 'is-on' : ''} onClick={() => choose(c)} onPointerEnter={(event) => { if (event.pointerType === 'mouse') void loadRanking(c).catch(() => {}); }} onFocus={(event) => { if (event.currentTarget.matches(':focus-visible')) void loadRanking(c).catch(() => {}); }}>
             <span className="edition-number" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
             <span><strong>{c.short}</strong><small>{notes[c.short] ?? '发现好歌'}</small></span>
           </button>
@@ -118,9 +125,18 @@ export function Charts() {
 
 /** The platform's other charts at a glance: top three of each, one tap away. */
 function Rail({ charts, onPick }: { charts: Chart[]; onPick: (c: Chart) => void }) {
+  const pageVisible = usePageVisible();
+  const [wide, setWide] = useState(() => matchMedia('(min-width: 1101px)').matches);
+  useEffect(() => {
+    const media = matchMedia('(min-width: 1101px)');
+    const update = () => setWide(media.matches);
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
   const [tops, setTops] = useState<Record<string, Item[]>>({});
   const keys = charts.map((c) => `${c.source}:${c.id}`).join(',');
   useEffect(() => {
+    if (!wide || !pageVisible) return;
     let alive = true;
     for (const c of charts) {
       loadRanking(c)
@@ -131,7 +147,7 @@ function Rail({ charts, onPick }: { charts: Chart[]; onPick: (c: Chart) => void 
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keys]);
+  }, [keys, wide, pageVisible]);
   if (charts.length === 0) return null;
   return (
     <aside className="chart-rail">

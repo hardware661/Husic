@@ -8,17 +8,27 @@ import { Link, navigate } from './router';
 
 // Home: every block has its own form — a crate of records to start from, a
 // feature list, a cover quilt, playlists in Cover Flow, a listening diary.
+let homeVersion = -1;
+let homeRequest: { version: number; promise: Promise<HomeData> } | null = null;
 
 export function Home() {
   const { version } = useLibrary();
   const [data, setData] = useState<HomeData | null>(() => recall<HomeData>('home:multi')?.value ?? null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
+    const hit = recall<HomeData>('home:multi');
+    if (hit && homeVersion === version && Date.now() - hit.at < 60_000) { setData(hit.value); return; }
     let alive = true;
-    api
-      .home()
+    if (!homeRequest || homeRequest.version !== version) {
+      const request = api.home().then((data) => {
+        if (homeRequest?.promise === request) { remember('home:multi', data); homeVersion = version; }
+        return data;
+      });
+      homeRequest = { version, promise: request };
+      void request.finally(() => { if (homeRequest?.promise === request) homeRequest = null; }).catch(() => {});
+    }
+    homeRequest.promise
       .then((d) => {
-        remember('home:multi', d);
         if (alive) setData(d);
       })
       .catch(() => alive && setFailed(true));
@@ -80,6 +90,7 @@ function Crate({ data }: { data: HomeData }) {
       art: (
         <span className="sleeve-daily">
           <Mosaic covers={daily.map((s) => s.cover).filter(Boolean) as string[]} size={180} />
+          <span className="sleeve-month">{now.getMonth() + 1}月</span>
           <b>{now.getDate()}</b>
         </span>
       ),
@@ -137,15 +148,15 @@ function Crate({ data }: { data: HomeData }) {
     <section className="crate">
       <div className="crate-row">
         {sleeves.map((v) => (
-          <button key={v.key} className={`sleeve${v.live ? ' is-live' : ''}`} onClick={v.onPlay}>
+          <button key={v.key} className={`sleeve crate-entry-${v.key.startsWith('p') ? 'playlist' : v.key}${v.live ? ' is-live' : ''}`} onClick={v.onPlay}>
             <span className="sleeve-stage">
               <span className="sleeve-disc" aria-hidden="true">
                 {v.disc && <img src={sized(v.disc, 120)} alt="" loading="lazy" decoding="async" />}
               </span>
               <span className="sleeve-art">{v.art}</span>
             </span>
-            <strong>{v.title}</strong>
-            <small>{v.note}</small>
+            <span className="sleeve-copy"><strong>{v.title}</strong>{v.note && <small>{v.note}</small>}</span>
+            {['daily', 'fm'].includes(v.key) && <span className="sleeve-play" aria-hidden="true"><Icon name="play" size={15} /></span>}
           </button>
         ))}
       </div>

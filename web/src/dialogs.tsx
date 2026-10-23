@@ -2,21 +2,22 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Icon } from './icons';
 
 /** Small, local forms; the browser handles modal focus and background inertness. */
-export function ActionDialog({ title, description, inputLabel, confirmLabel, onConfirm, onClose }: {
-  title: string; description?: string; inputLabel?: string; confirmLabel: string;
+export function ActionDialog({ title, description, inputLabel, initialValue = '', confirmLabel, onConfirm, onClose }: {
+  title: string; description?: string; inputLabel?: string; initialValue?: string; confirmLabel: string;
   onConfirm: (value: string) => Promise<void>; onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const heading = useId();
   const field = useId();
-  const [value, setValue] = useState('');
+  const [value, setValue] = useState(initialValue);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   useEffect(() => {
     const previous = document.activeElement;
     const node = ref.current;
     node?.showModal();
-    return () => { node?.close(); if (previous instanceof HTMLElement && previous.isConnected) previous.focus({ preventScroll: true }); };
+    if (initialValue) node?.querySelector<HTMLInputElement>('input')?.select();
+    return () => { node?.close(); if (!document.documentElement.hasAttribute('data-page-hidden') && previous instanceof HTMLElement && previous.isConnected) previous.focus({ preventScroll: true }); };
   }, []);
   return <dialog className="action-dialog" ref={ref} aria-labelledby={heading}
     onKeyDown={(event) => event.stopPropagation()}

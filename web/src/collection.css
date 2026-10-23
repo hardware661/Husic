@@ -1,4 +1,9 @@
-.collection-header { align-items: center; gap: 32px; padding: 22px 0 30px; }
+.collection-header { position: relative; align-items: center; gap: 32px; padding: 22px 0 30px; }
+.collection-menu { position: absolute; top: 38px; right: 0; }
+html[data-music-desktop] .collection-menu { top: 58px; }
+.collection-menu > .icon-button { width: 36px; height: 36px; background: var(--fill); color: var(--ink); }
+.collection-header.has-menu h1 { padding-right: 40px; }
+.playlist-actions-menu { inset: auto; margin: 0; min-width: 172px; border: .5px solid var(--line); color: var(--ink); }
 .np-grab-button { display: grid; place-items: center; min-width: 64px; height: 32px; border-radius: 16px; }
 .np-grab-button .np-grabber { display: block; transition: width 180ms ease,background-color 180ms ease; }
 .np-grab-button:hover .np-grabber { width: 46px; background: rgba(255,255,255,.7); }
@@ -24,6 +29,9 @@
 .is-sidebar-collapsed .back-to-top { left: calc(50% + 36px); }
 html[data-music-desktop] .back-to-top { top: 42px; }
 @media (max-width:760px) {
+  .collection-actions:has(> .bulk-download-button) { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+  .collection-actions:has(> .bulk-download-button) .play-buttons { display: contents; }
+  .collection-actions:has(> .bulk-download-button) .pill { min-width: 0; height: 40px; padding-inline: 8px; gap: 5px; font-size: 13px; white-space: nowrap; }
   :is(.collection-page,.playlist-page) .collection-header { display: grid; grid-template-columns: 104px minmax(0,1fr); gap: 0 20px; align-items: center; text-align: left; padding: 14px 0 24px; }
   :is(.collection-page,.playlist-page) .collection-cover-wrap { width: 104px; grid-column: 1; grid-row: 1 / span 3; }
   :is(.collection-page,.playlist-page) .collection-art { width: 100%; }

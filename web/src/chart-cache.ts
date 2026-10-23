@@ -6,7 +6,6 @@ const answers = new Map<string, { at: number; value: RankingData }>();
 const pending = new Map<string, Promise<RankingData>>();
 let catalog: Chart[] = [];
 let catalogRequest: Promise<Chart[]> | null = null;
-let warming: Promise<void> | null = null;
 export const chartKey = (c: Chart) => `${c.source}:${c.id}`;
 export const cachedCharts = () => catalog;
 export const cachedRanking = (c: Chart) => answers.get(chartKey(c))?.value;
@@ -39,18 +38,16 @@ export function loadRanking(c: Chart): Promise<RankingData> {
   return request;
 }
 
-/** The four platform landing charts first, then the other editions. Only two
- * background requests at a time; selected charts never wait in this queue. */
-export function warmRankings(charts: Chart[]) {
-  if (warming) return warming;
-  const first = charts.filter((c, i) => charts.findIndex((other) => other.source === c.source) === i);
-  const queue = [...first, ...charts.filter((c) => !first.includes(c))];
+/** Desktop keeps its original warm chart switching. Stop starting requests
+ * when the caller becomes hidden; existing answers/in-flight calls are shared. */
+export async function warmRankings(charts: Chart[], active: () => boolean) {
+  const first = charts.filter((c, i) => charts.findIndex(other => other.source === c.source) === i);
+  const queue = [...first, ...charts.filter(c => !first.includes(c))];
   const worker = async () => {
-    while (queue.length) {
-      const c = queue.shift()!;
-      try { await loadRanking(c); } catch { /* a click can retry this chart */ }
+    while (queue.length && active() && !document.hidden) {
+      const chart = queue.shift()!;
+      try { await loadRanking(chart); } catch { /* A click can retry this chart. */ }
     }
   };
-  warming = Promise.all([worker(), worker()]).then(() => {}).finally(() => { warming = null; });
-  return warming;
+  await Promise.all([worker(), worker()]);
 }

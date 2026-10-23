@@ -1,4 +1,4 @@
-import { useLayoutEffect, useSyncExternalStore, type MouseEvent, type ReactNode, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useSyncExternalStore, type MouseEvent, type ReactNode, type CSSProperties } from 'react';
 
 // A tiny History-API router: the app has a handful of flat routes.
 
@@ -24,8 +24,12 @@ function subscribe(listener: () => void) {
 export function navigate(path: string, replace = false) {
   if (path === location.pathname + location.search) return;
   window.dispatchEvent(new Event('music-before-navigation'));
-  currentEntry = replace ? currentEntry : { key: crypto.randomUUID(), depth: currentEntry.depth + 1 };
-  navigation = { ...currentEntry, kind: replace ? 'replace' : 'push' };
+  // Phone tabs are peers. Desktop links keep normal browser/Alt+Left history.
+  const rootPath = path.split('?')[0];
+  const root = matchMedia('(max-width: 760px)').matches && ['/', '/discover', '/charts', '/library', '/settings'].includes(rootPath);
+  replace ||= root;
+  currentEntry = root ? { key: `tab:${rootPath}`, depth: 0 } : replace ? currentEntry : { key: crypto.randomUUID(), depth: currentEntry.depth + 1 };
+  navigation = { ...currentEntry, kind: root && location.pathname !== rootPath ? 'tab' : replace ? 'replace' : 'push' };
   if (replace) history.replaceState({ ...history.state, musicEntry: currentEntry }, '', path);
   else history.pushState({ musicEntry: currentEntry }, '', path);
   notify();
@@ -38,6 +42,22 @@ export function goBack() {
 
 export function usePath() {
   return useSyncExternalStore(subscribe, () => location.pathname + location.search);
+}
+
+/** Safari starts history swipes on touchstart, before a pointermove can
+ * cancel them. Reserve this narrow strip for the player's own back gesture;
+ * ordinary pages never swipe through browser history. Vertical scrolling
+ * outside the strip and explicit Back buttons remain native. */
+export function useMobileEdgeGuard() {
+  useEffect(() => {
+    const start = (event: TouchEvent) => {
+      if (matchMedia('(max-width: 760px)').matches && event.touches.length === 1 && event.touches[0].clientX <= 24 && event.cancelable) event.preventDefault();
+    };
+    // Cancelling the start reserves the whole gesture. A non-passive global
+    // touchmove would unnecessarily put every ordinary scroll on the main thread.
+    document.addEventListener('touchstart', start, { passive: false });
+    return () => document.removeEventListener('touchstart', start);
+  }, []);
 }
 
 /** Matches "/playlist/:id" style patterns against the current path. */
@@ -65,7 +85,7 @@ export function Link({ to, className, children, label, style, onIntent }: { to: 
     navigate(to);
   };
   return (
-    <a href={to} className={className} onClick={onClick} onPointerEnter={onIntent} onFocus={onIntent} onPointerDown={onIntent} aria-label={label} style={style}>
+    <a href={to} draggable={false} onDragStart={event => event.preventDefault()} className={className} onClick={onClick} onPointerEnter={onIntent} onFocus={onIntent} onPointerDown={onIntent} aria-label={label} style={style}>
       {children}
     </a>
   );
@@ -78,7 +98,7 @@ export function useScrollMemory(element: HTMLElement | null, path: string) {
     if (!element) return;
     const key = `music-scroll:${visit.key}`;
     let target = 0;
-    try { if (visit.kind === 'pop' || visit.kind === 'initial') target = Number(sessionStorage.getItem(key)) || 0; } catch { /* Private browsing can deny storage. */ }
+    try { if (visit.kind === 'pop' || visit.kind === 'initial' || visit.kind === 'tab') target = Number(sessionStorage.getItem(key)) || 0; } catch { /* Private browsing can deny storage. */ }
     let restoring = target > 0;
     let observed: Element | null = null;
     const resize = new ResizeObserver(() => restore());
@@ -90,19 +110,23 @@ export function useScrollMemory(element: HTMLElement | null, path: string) {
       if (Math.abs(element.scrollTop - target) < 2) finish();
     };
     const watch = () => {
-      const page = element.firstElementChild;
+      const page = element.querySelector('[data-route-active="true"]') ?? element.firstElementChild;
       if (page !== observed) { if (observed) resize.unobserve(observed); observed = page; if (page) resize.observe(page); }
     };
     element.scrollTop = target;
     if (restoring) { mutations.observe(element, { childList: true, subtree: true }); watch(); restore(); }
     const abort = () => finish();
-    const save = () => { if (!restoring) try { sessionStorage.setItem(key, String(element.scrollTop)); } catch { /* No persistence still leaves navigation usable. */ } };
+    let saveTimer: ReturnType<typeof setTimeout> | undefined;
+    const save = () => { clearTimeout(saveTimer); saveTimer = undefined; if (!restoring) try { sessionStorage.setItem(key, String(element.scrollTop)); } catch { /* No persistence still leaves navigation usable. */ } };
+    const scheduleSave = () => { clearTimeout(saveTimer); saveTimer = setTimeout(save, 180); };
     const timer = setTimeout(finish, 8000);
     window.addEventListener('music-before-navigation', save);
-    element.addEventListener('scroll', save, { passive: true });
+    window.addEventListener('music-before-presentation-suspend', save);
+    window.addEventListener('pagehide', save);
+    element.addEventListener('scroll', scheduleSave, { passive: true });
     element.addEventListener('wheel', abort, { passive: true });
     element.addEventListener('touchstart', abort, { passive: true });
     element.addEventListener('keydown', abort);
-    return () => { finish(); clearTimeout(timer); window.removeEventListener('music-before-navigation', save); element.removeEventListener('scroll', save); element.removeEventListener('wheel', abort); element.removeEventListener('touchstart', abort); element.removeEventListener('keydown', abort); };
+    return () => { clearTimeout(saveTimer); finish(); clearTimeout(timer); window.removeEventListener('music-before-navigation', save); window.removeEventListener('music-before-presentation-suspend', save); window.removeEventListener('pagehide', save); element.removeEventListener('scroll', scheduleSave); element.removeEventListener('wheel', abort); element.removeEventListener('touchstart', abort); element.removeEventListener('keydown', abort); };
   }, [element, path, visit]);
 }

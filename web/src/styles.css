@@ -229,10 +229,10 @@ ol { list-style: none; margin: 0; padding: 0; }
 .grid-song.is-current .song-text strong { font-weight: 650; }
 
 .bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 13px; }
-.bars i { width: 3px; background: var(--ink); border-radius: 1px; animation: bar 0.9s ease-in-out infinite alternate; }
+.bars i { width: 3px; height: 100%; transform-origin: bottom; background: var(--ink); border-radius: 1px; animation: bar 0.9s ease-in-out infinite alternate; }
 .bars i:nth-child(2) { animation-delay: -0.3s; }
 .bars i:nth-child(3) { animation-delay: -0.6s; }
-@keyframes bar { from { height: 25%; } to { height: 100%; } }
+@keyframes bar { from { transform: scaleY(.25); } to { transform: scaleY(1); } }
 
 /* ---------- tiles ---------- */
 
@@ -277,6 +277,19 @@ ol { list-style: none; margin: 0; padding: 0; }
 .mobile-back, .collection-navigation { display: none; }
 
 /* ---------- menu ---------- */
+
+.sidebar, .tab-bar { -webkit-touch-callout: none; user-select: none; }
+
+/* Touch UI is app chrome, not a document. Keep native selection/editing in
+   fields (including editable descendants); desktop selection stays intact. */
+@media (hover: none) and (pointer: coarse) {
+  .frame, .frame * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .frame :is(input, textarea, [contenteditable]:not([contenteditable="false"])),
+  .frame [contenteditable]:not([contenteditable="false"]) * {
+    -webkit-user-select: text; user-select: text; -webkit-touch-callout: default;
+  }
+}
+.sidebar :is(a,img), .tab-bar a { -webkit-user-drag: none; }
 
 .menu-anchor { position: relative; }
 .menu {

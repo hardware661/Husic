@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { artistLine } from './api';
 import { prepareChartEntry } from './chart-cache';
-import { Cover, Heart } from './components';
+import { Cover, DownloadButton, Heart } from './components';
 import { Icon, PlayGlyph } from './icons';
 import { usePageMotion } from './motion';
 import { useLibrary } from './library';
@@ -30,7 +30,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
   const path = usePath();
   const { playlists } = useLibrary();
   return (
-    <aside className="sidebar" id="desktop-sidebar">
+    <aside className="sidebar" id="desktop-sidebar" onDragStart={event => event.preventDefault()} onContextMenu={event => event.preventDefault()}>
       <button className="brand" type="button" onClick={onToggle} aria-expanded={!collapsed} aria-controls="sidebar-navigation" aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'} title={collapsed ? '展开侧边栏' : '收起侧边栏'}>
         <img className="brand-mark" src="/brand/music-icon.svg?v=20261022-hardware-a" width={28} height={28} alt="" />
         <strong>Husic</strong>
@@ -77,7 +77,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
 export function TabBar() {
   const path = usePath();
   return (
-    <nav className="tab-bar" aria-label="主要导航">
+    <nav className="tab-bar" aria-label="主要导航" onDragStart={event => event.preventDefault()} onContextMenu={event => event.preventDefault()}>
       {tabs.map((s) => (
         <Link key={s.to} to={s.to} className={isActive(path, s.to) ? 'is-selected' : ''} onIntent={s.to === '/charts' ? prepareChartEntry : undefined}>
           <Icon name={s.icon} size={23} />
@@ -89,7 +89,7 @@ export function TabBar() {
 }
 
 /** The floating glass bar: tap the song to open the full player. */
-export function MiniPlayer({ onOpen }: { onOpen: () => void }) {
+export function MiniPlayer({ onOpen, covered = false }: { onOpen: () => void; covered?: boolean }) {
   const { current: actual, presentation: current, playing, loading, toggle, next, previous } = usePlayer();
   if (!current) return null;
   const active=playing||loading;
@@ -112,13 +112,11 @@ export function MiniPlayer({ onOpen }: { onOpen: () => void }) {
           <strong>{current.title}</strong>
           <small>{loading ? '正在找可以播放的版本…' : artistLine(current)}</small>
         </span>
-        <MiniProgress />
+        <MiniProgress active={!covered} />
       </button>
       <div className="mini-extra">
         {actual && <Heart item={actual} />}
-        <button className="icon-button" aria-label="歌词" onClick={onOpen}>
-          <Icon name="lyrics" size={18} />
-        </button>
+        {actual && <DownloadButton key={actual.songId ?? actual.copies.map(copy => `${copy.source}:${copy.id}`).join('|')} item={actual} />}
         <Volume />
       </div>
       <button className="icon-button mini-play-mobile" aria-label={active ? '暂停' : '播放'} onClick={toggle}>
@@ -131,8 +129,8 @@ export function MiniPlayer({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-function MiniProgress() {
-  const { time, duration } = usePosition();
+function MiniProgress({ active }: { active: boolean }) {
+  const { time, duration } = usePosition(active);
   const ratio = duration > 0 ? Math.min(1, time / duration) : 0;
   return (
     <span className="mini-progress" aria-hidden="true">

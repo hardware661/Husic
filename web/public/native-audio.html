@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self'">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>原生播放对照 · Husic</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; min-height: 100dvh; box-sizing: border-box; padding: max(32px, env(safe-area-inset-top)) 24px 32px; }
+    main { max-width: 480px; margin: 10vh auto 0; }
+    h1 { font-size: 24px; font-weight: 600; }
+    p { line-height: 1.7; opacity: .72; }
+    audio { display: block; width: 100%; margin: 32px 0 20px; }
+    button, a { font: inherit; -webkit-tap-highlight-color: transparent; }
+    button { padding: 10px 16px; cursor: pointer; }
+    nav { display: flex; align-items: center; flex-wrap: wrap; gap: 24px; margin-top: 32px; }
+    nav button { border: 0; background: none; padding: 8px 0; color: inherit; text-decoration: underline; }
+    a { color: inherit; }
+    [hidden] { display: none !important; }
+    #status { min-height: 3.4em; font-size: 14px; }
+  </style>
+  <script src="/native-audio.js" defer></script>
+</head>
+<body>
+  <main>
+    <h1>原生播放对照</h1>
+    <p>同一首歌，保持原音质。这里只播放当前歌曲，不自动换歌。</p>
+    <audio controls playsinline preload="auto" aria-label="当前歌曲"></audio>
+    <button id="start" disabled>开始对照播放</button>
+    <p id="status" role="status">正在准备当前歌曲…</p>
+    <nav aria-label="对照操作">
+      <a id="back" href="/settings">返回 Husic</a>
+      <button id="copy" disabled>复制对照诊断</button>
+    </nav>
+  </main>
+</body>
+</html>

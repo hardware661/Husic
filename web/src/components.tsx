@@ -7,8 +7,9 @@ import { useLibrary } from './library';
 import { usePlayer } from './player';
 import { Link, navigate, goBack, usePath } from './router';
 import { ActionDialog } from './dialogs';
-import { downloadAudio, exportLocalAudio, localAudioID } from './local-audio';
+import { downloadAudio, downloadKey, exportLocalAudio, localAudioID, useLocalAudio } from './local-audio';
 import { toast } from './toast';
+import { batchIsRunning, startAudioDownloadBatch, useAudioDownloadBatch } from './audio-download-batch';
 
 const loadedCovers = new Set<string>();
 function rememberCover(url: string) {
@@ -69,6 +70,37 @@ export function Heart({ item, size = 17 }: { item: Item; size?: number }) {
       <Icon name={liked ? 'heartFill' : 'heart'} size={size} />
     </button>
   );
+}
+
+export function DownloadButton({ item }: { item: Item }) {
+  const [saving, setSaving] = useState(false);
+  const { records } = useLocalAudio('download');
+  const saved = records.some(record => record.downloadKey === downloadKey(item));
+  const localID = localAudioID(item);
+  const label = saving ? localID ? '正在另存为' : '正在下载' : localID ? '另存为' : saved ? '已下载' : '下载';
+  return <button type="button" className="icon-button" aria-label={label} title={label} disabled={saving || saved && !localID} aria-busy={saving}
+    onClick={async event => {
+      event.stopPropagation();
+      if (saving || saved && !localID) return;
+      setSaving(true);
+      try {
+        if (localID) await exportLocalAudio(localID);
+        else { await downloadAudio(item); toast('已下载到本地'); }
+      } catch (error) { toast(error instanceof Error ? error.message : '下载失败，请重试'); }
+      finally { setSaving(false); }
+    }}>
+    <Icon name={saving ? 'sync' : saved && !localID ? 'check' : 'download'} size={18} className={saving ? 'spin' : undefined}/>
+  </button>;
+}
+
+export function BulkDownloadButton({ items, name }: { items: Item[]; name: string }) {
+  const batch = useAudioDownloadBatch();
+  const busy = batchIsRunning(batch);
+  return <button type="button" className="pill bulk-download-button" aria-label="全部下载" aria-busy={busy}
+    disabled={!items.length || busy} title={busy ? '已有歌单正在批量下载' : '下载当前歌单的全部歌曲'}
+    onClick={() => { if (startAudioDownloadBatch(items, name)) toast('已开始逐首下载，可在下载管理查看'); }}>
+    <Icon name={busy ? 'sync' : 'download'} size={15} className={busy ? 'spin' : undefined}/>{busy ? '下载中' : '全部下载'}
+  </button>;
 }
 
 /** The "…" menu every song carries. */

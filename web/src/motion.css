@@ -210,3 +210,19 @@
 @media (hover:hover) and (pointer:fine) { .queue-drag-handle:hover { color: #fff; background: rgba(255,255,255,.08); } }
 @media (prefers-reduced-motion:reduce) { .queue-upcoming li { transition: none; } }
 html[data-motion="reduced"] .queue-upcoming li { transition: none; }
+
+/* A dragged sheet has one compositor owner; its blurred surface stays opaque. */
+.now-playing[data-dragging], .now-playing[data-dismissing] { opacity: 1; visibility: visible; transition: none; }
+.now-playing[data-dismissed] { opacity: 0; visibility: hidden; transition: none; }
+.np-art[role="button"] { cursor: pointer; outline-offset: 7px; -webkit-tap-highlight-color: transparent; }
+.np-art[role="button"]:focus-visible { outline: 2px solid rgba(255,255,255,.7); border-radius: 14px; }
+.np-edge-back { display: none; }
+@media (max-width: 760px) {
+  .np-edge-back { display: block; position: absolute; z-index: 4; left: 0; top: 0; bottom: 0; width: 24px; touch-action: none; }
+}
+
+/* Screen-off is audio-only: do not keep rasterizing a hidden WebKit surface. */
+:root[data-page-hidden] *, :root[data-page-hidden] *::before, :root[data-page-hidden] *::after { animation-play-state: paused !important; transition: none !important; }
+:root[data-page-hidden] .frame, :root[data-page-hidden] .frame * { visibility: hidden !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+:root[data-page-hidden] .artwork-flight { display: none !important; }
+:root[data-page-hidden] #root::before { display: none !important; }

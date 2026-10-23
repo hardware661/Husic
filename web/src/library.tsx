@@ -12,6 +12,7 @@ type Library = {
   toggleLike: (item: Item) => Promise<void>;
   addTo: (playlistId: number, items: Item[]) => Promise<void>;
   createPlaylist: (name: string) => Promise<number>;
+  renamePlaylist: (playlist: Playlist, name: string) => Promise<void>;
   refresh: () => void;
   version: number; // bumps when likes or playlists change
 };
@@ -107,9 +108,16 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     return id;
   }, [refresh]);
 
+  const renamePlaylist = useCallback(async (playlist: Playlist, name: string) => {
+    await api.renamePlaylist(playlist.id, name, playlist.description, playlist.cover);
+    setPlaylists(current => current.map(p => p.id === playlist.id ? { ...p, name } : p));
+    setVersion(v => v + 1);
+    refresh();
+  }, [refresh]);
+
   const value = useMemo(
-    () => ({ playlists, isLiked, toggleLike, addTo, createPlaylist, refresh, version }),
-    [playlists, isLiked, toggleLike, addTo, createPlaylist, refresh, version],
+    () => ({ playlists, isLiked, toggleLike, addTo, createPlaylist, renamePlaylist, refresh, version }),
+    [playlists, isLiked, toggleLike, addTo, createPlaylist, renamePlaylist, refresh, version],
   );
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;
 }

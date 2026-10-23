@@ -10,6 +10,7 @@ import {
   type AudioDownload, type LocalAudioRecord,
 } from './local-audio';
 import './local-music.css';
+import { batchIsRunning, cancelAudioDownloadBatch, dismissAudioDownloadBatch, useAudioDownloadBatch, type AudioDownloadBatch } from './audio-download-batch';
 
 function sizeLabel(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -122,18 +123,36 @@ function DownloadTask({ task }: { task: AudioDownload }) {
   </li>;
 }
 
+function BatchProgress({ batch }: { batch: AudioDownloadBatch }) {
+  const active = batchIsRunning(batch);
+  const title = batch.state === 'running' ? '正在批量下载' : batch.state === 'cancelling' ? '正在取消' : batch.state === 'cancelled' ? '已取消批量下载' : batch.state === 'failed' ? '存储失败，已停止' : '批量下载结束';
+  return <section className="offline-batch" role="region" aria-label="歌单批量下载">
+    <div className="offline-batch-heading"><div><strong>{title}</strong><p title={batch.name}>{batch.name}</p></div>
+      {active ? <button className="pill" aria-label="取消全部下载" disabled={batch.state === 'cancelling'} onClick={cancelAudioDownloadBatch}>取消全部</button>
+        : <button className="icon-button" aria-label="关闭批量下载记录" title="收起" onClick={dismissAudioDownloadBatch}><Icon name="close" size={16}/></button>}
+    </div>
+    <div className="offline-batch-progress" role="progressbar" aria-label="歌单处理进度" aria-valuemin={0} aria-valuemax={batch.total} aria-valuenow={batch.finished}>
+      <span style={{ width: `${batch.total ? batch.finished / batch.total * 100 : 0}%` }}/>
+    </div>
+    <p className="offline-batch-counts">{batch.finished} / {batch.total}<span>已下载 {batch.downloaded} · 跳过 {batch.skipped} · 失败 {batch.failed}</span></p>
+    {batch.error && <p className="offline-error" role="alert">{batch.error}</p>}
+  </section>;
+}
+
 export function DownloadManager() {
   const { records, loading, error } = useLocalAudio('download');
   const tasks = useAudioDownloads();
+  const batch = useAudioDownloadBatch();
   const active = tasks.filter(task => task.state === 'downloading' || task.state === 'saving').length;
   return <div className="page offline-page download-manager-page">
     <AudioHeading title="下载管理" records={records}/>
+    {batch && <BatchProgress batch={batch}/>}
     {tasks.length > 0 && <section className="offline-download-section" aria-label="下载任务">
       <header className="section-head"><h2>{active ? `下载中 · ${active}` : '下载记录'}</h2></header>
       <ol className="offline-download-tasks">{tasks.map(task => <DownloadTask key={task.id} task={task}/>)}</ol>
     </section>}
     {error && <p className="offline-error" role="alert">{error}</p>}
     {records.length > 0 && <div className="offline-toolbar"><h2>已完成 <span>{records.length}</span></h2><PlayButtons items={records.map(record => record.item)}/></div>}
-    {loading ? <div className="loading" aria-label="正在读取下载"/> : records.length ? <AudioRows records={records}/> : tasks.length === 0 ? <Empty title="还没有下载"/> : null}
+    {loading ? <div className="loading" aria-label="正在读取下载"/> : records.length ? <AudioRows records={records}/> : tasks.length === 0 && !batchIsRunning(batch) ? <Empty title="还没有下载"/> : null}
   </div>;
 }

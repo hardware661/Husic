@@ -2,7 +2,7 @@ import { SearchField } from './search-ui';
 import { searchMusic, rememberSearch } from './search-data';
 import { useEffect, useState } from 'react';
 import { api, type Item } from './api';
-import { BackButton, Empty, PageHeader, PlayButtons, PlaylistTile, Section, SongList } from './components';
+import { BackButton, BulkDownloadButton, Empty, PageHeader, PlayButtons, PlaylistTile, Section, SongList } from './components';
 import { ActionDialog } from './dialogs';
 import { Icon } from './icons';
 import { useLibrary } from './library';
@@ -10,6 +10,7 @@ import { navigate, query, usePath } from './router';
 import { toast } from './toast';
 import { CollectionCover } from './collection-cover';
 import { useLocalAudio } from './local-audio';
+import { PlaylistActions } from './playlist-actions';
 
 /** Loads data for a page; reloads when deps change. */
 function useLoad<T>(load: () => Promise<T>, deps: unknown[]) {
@@ -122,11 +123,11 @@ export function Recent() {
 }
 
 export function PlaylistPage({ id }: { id: number }) {
-  const { version, refresh } = useLibrary();
+  const { version, refresh, renamePlaylist } = useLibrary();
   const { data, error, loading } = useLoad(() => api.playlist(id), [id, version]);
   const [removed, setRemoved] = useState<Set<number>>(new Set());
   const [deleting, setDeleting] = useState(false);
-  useEffect(() => { setRemoved(new Set()); setDeleting(false); }, [id]);
+  const [renaming, setRenaming] = useState(false);
   if (loading && !data) return <Loading />;
   if (error || !data) return <Failed message={error} />;
   const songs = data.songs.filter((s) => !removed.has(s.songId ?? 0));
@@ -141,16 +142,8 @@ export function PlaylistPage({ id }: { id: number }) {
         note={p.description}
         art={<CollectionCover coverKey={`playlist:${p.id}`} title={p.name} src={p.cover||songs[0]?.cover}/>}
         items={songs}
-        extra={
-          !p.origin && (
-            <button
-              className="pill"
-              onClick={() => setDeleting(true)}
-            >
-              删除
-            </button>
-          )
-        }
+        menu={<PlaylistActions onRename={() => setRenaming(true)} onDelete={() => setDeleting(true)} />}
+        extra={<BulkDownloadButton items={songs} name={p.name} />}
       />
       <SongList
         items={songs}
@@ -162,7 +155,8 @@ export function PlaylistPage({ id }: { id: number }) {
         }}
         empty={<Empty title="歌单是空的" />}
       />
-      {deleting && <ActionDialog title="删除歌单" description={`删除「${p.name}」？歌曲本身不会被删除。`} confirmLabel="删除歌单" onClose={() => setDeleting(false)} onConfirm={async () => { await api.deletePlaylist(p.id); refresh(); navigate('/library'); }} />}
+      {renaming && <ActionDialog title="重命名歌单" inputLabel="歌单名称" initialValue={p.name} confirmLabel="保存" onClose={() => setRenaming(false)} onConfirm={async name => { await renamePlaylist(p, name); toast('歌单已重命名'); }} />}
+      {deleting && <ActionDialog title="删除歌单" description={`从 Husic 中删除「${p.name}」？不会删除歌曲或音乐平台上的歌单。`} confirmLabel="删除歌单" onClose={() => setDeleting(false)} onConfirm={async () => { await api.deletePlaylist(p.id); refresh(); navigate('/library'); }} />}
     </div>
   );
 }
@@ -180,17 +174,19 @@ export function RemotePlaylist({ id }: { id: string }) {
         note={data.playlist.note}
         art={<CollectionCover coverKey={`netease:${id}`} title={data.playlist.name} src={data.playlist.cover||data.songs[0]?.cover}/>}
         items={data.songs}
+        extra={<BulkDownloadButton items={data.songs} name={data.playlist.name} />}
       />
       <SongList items={data.songs} numbered />
     </div>
   );
 }
 
-export function CollectionHeader({ title, subtitle, note, art, items, extra }: {
-  title: string; subtitle: string; note?: string; art: React.ReactNode; items: Item[]; extra?: React.ReactNode;
+export function CollectionHeader({ title, subtitle, note, art, items, extra, menu }: {
+  title: string; subtitle: string; note?: string; art: React.ReactNode; items: Item[]; extra?: React.ReactNode; menu?: React.ReactNode;
 }) {
   return (
-    <header className="collection-header">
+    <header className={`collection-header${menu ? ' has-menu' : ''}`}>
+      {menu && <div className="collection-menu">{menu}</div>}
       {art}
       <div className="collection-info">
         <h1>{title}</h1>
