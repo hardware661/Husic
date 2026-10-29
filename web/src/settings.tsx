@@ -27,7 +27,7 @@ function connector(action: 'ping' | 'start' | 'complete' | 'cancel', id = ''): P
       if (
         event.source !== window ||
         event.origin !== location.origin ||
-        event.data?.type !== 'HUSIC_CONNECT_RESPONSE' ||
+        (event.data?.type !== 'HUSIC_CONNECT_RESPONSE' && event.data?.type !== 'MUSIC_CONNECT_RESPONSE') ||
         event.data.requestId !== requestId
       )
         return;
@@ -38,7 +38,10 @@ function connector(action: 'ping' | 'start' | 'complete' | 'cancel', id = ''): P
       action === 'complete' ? 45000 : action === 'ping' ? 1200 : 12000,
     );
     window.addEventListener('message', receive);
-    window.postMessage({ type: 'HUSIC_CONNECT_REQUEST', requestId, action, id }, location.origin);
+    // Extensions installed before 0.2 listen for the MUSIC_ name; only one
+    // extension is installed, so exactly one of the two requests is answered.
+    for (const type of ['HUSIC_CONNECT_REQUEST', 'MUSIC_CONNECT_REQUEST'])
+      window.postMessage({ type, requestId, action, id }, location.origin);
   });
 }
 

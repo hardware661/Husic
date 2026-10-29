@@ -12,11 +12,16 @@ const native = () => (window as Window & { chrome?: { webview?: NativeBridge } }
 /** Text-only companion to the existing Audio, never a second playback path. */
 export function useDesktopLyrics(item: Item | null, audio: HTMLAudioElement, concealed: boolean) {
   const [enabled, setEnabled] = useState(false);
+  // Clients before 0.2 name their messages music-*; answer in their words.
+  const [prefix, setPrefix] = useState('husic');
   useEffect(() => {
     const bridge = native();
     if (!bridge) return;
     const receive = (event: MessageEvent) => {
-      if (event.data?.type === 'husic-desktop-state') setEnabled(event.data.lyricsEnabled === true);
+      const type = event.data?.type;
+      if (type !== 'husic-desktop-state' && type !== 'music-desktop-state') return;
+      setPrefix(type.split('-')[0]);
+      setEnabled(event.data.lyricsEnabled === true);
     };
     bridge.addEventListener('message', receive);
     bridge.postMessage({ type: 'desktop-shell-ready' });
@@ -61,7 +66,7 @@ export function useDesktopLyrics(item: Item | null, audio: HTMLAudioElement, con
           state = 'synced';
         }
       }
-      const message = { type: 'husic-lyrics', line: line.slice(0, 500), secondary: secondary.slice(0, 500), state };
+      const message = { type: `${prefix}-lyrics`, line: line.slice(0, 500), secondary: secondary.slice(0, 500), state };
       const value = JSON.stringify(message);
       if (value !== previous) {
         previous = value;
@@ -89,5 +94,5 @@ export function useDesktopLyrics(item: Item | null, audio: HTMLAudioElement, con
       clearInterval(timer);
       events.forEach((event) => audio.removeEventListener(event, publish));
     };
-  }, [item, audio, concealed, enabled]);
+  }, [item, audio, concealed, enabled, prefix]);
 }

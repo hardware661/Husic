@@ -9,7 +9,7 @@
   top: 38px;
   right: 0;
 }
-html[data-husic-desktop] .collection-menu {
+html:is([data-husic-desktop], [data-music-desktop]) .collection-menu {
   top: 58px;
 }
 .collection-menu > .icon-button {
@@ -157,7 +157,7 @@ html[data-husic-desktop] .collection-menu {
 .is-sidebar-collapsed .back-to-top {
   left: calc(50% + 36px);
 }
-html[data-husic-desktop] .back-to-top {
+html:is([data-husic-desktop], [data-music-desktop]) .back-to-top {
   top: 42px;
 }
 @media (max-width: 760px) {
