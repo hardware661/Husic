@@ -96,13 +96,6 @@ func (s *Server) accountRoutes(mux *http.ServeMux) {
 			writeJSON(w, 200, attempt)
 		}))
 	}
-	// Older open clients receive a terminal response: no QR polling, SMS,
-	// or late confirmation can continue a retired account connection.
-	for _, kind := range []string{"qq", "kugou", "migu"} {
-		mux.HandleFunc("/api/accounts/"+kind+"/", func(w http.ResponseWriter, r *http.Request) {
-			fail(w, http.StatusGone, "账号连接已停用，免登录音乐仍可使用")
-		})
-	}
 	mux.HandleFunc("POST /api/accounts/netease/login", mutate(func(w http.ResponseWriter, r *http.Request) {
 		attempt, err := s.Accounts.StartNetEase(r.Context())
 		if err != nil {

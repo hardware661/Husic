@@ -87,10 +87,10 @@ export function recall<T>(key: string): { at: number; value: T } | null {
 
 export type Stream = { url: string; source: string; id: string; bitrate: number; format: string };
 export type ConnectionAttempt = { id: string; kind: string; state: string; expires: string; message?: string };
-export type AccountPlatform = 'qq' | 'bilibili' | 'kugou' | 'migu';
-export type QRKind = 'netease' | Exclude<AccountPlatform, 'migu'>;
+export type AccountPlatform = 'bilibili';
+export type QRKind = 'netease' | AccountPlatform;
 export type AccountState = { state: string; name?: string };
-export type AccountStatus = { netease: AccountState; youtube: { state: string; lastSuccess?: string }; qq?: AccountState; bilibili?: AccountState; kugou?: AccountState; migu?: AccountState };
+export type AccountStatus = { netease: AccountState; youtube: { state: string; lastSuccess?: string }; bilibili?: AccountState };
 export type AccountCollection = { id: string; name: string; cover: string; count: number };
 export type AccountCollectionPage = { collection: AccountCollection; songs: Item[]; total: number; next: number };
 

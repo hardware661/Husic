@@ -36,12 +36,6 @@ func (c *Client) request(ctx context.Context, host, path string, query url.Value
 	r.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36")
 	r.Header.Set("Accept", "application/json, text/plain, */*")
 	r.Header.Set("Referer", "https://www.bilibili.com/")
-	if c.kind == "qq" {
-		r.Header.Set("Referer", "https://y.qq.com/")
-	}
-	if strings.Contains(host, "ptlogin2") {
-		r.Header.Set("Referer", "https://xui.ptlogin2.qq.com/")
-	}
 	if form != nil {
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	} else if body != nil {
@@ -53,11 +47,7 @@ func (c *Client) request(ctx context.Context, host, path string, query url.Value
 		}
 		r.AddCookie(&http.Cookie{Name: k, Value: v})
 	}
-	client := c.direct
-	if host == "u.y.qq.com" {
-		client = c.music
-	}
-	response, err := client.Do(r)
+	response, err := c.direct.Do(r)
 	if err != nil {
 		return nil, nil, failure(host+path, -1, ErrUnavailable)
 	}
@@ -68,10 +58,7 @@ func (c *Client) request(ctx context.Context, host, path string, query url.Value
 	if response.StatusCode != 200 && response.StatusCode != 302 && response.StatusCode != 303 {
 		return nil, nil, failure(host+path, response.StatusCode, fmt.Errorf("平台暂时无法连接（%d）", response.StatusCode))
 	}
-	limit := int64(4 << 20)
-	if strings.Contains(host, "ptlogin2") || host == "graph.qq.com" {
-		limit = 512 << 10
-	}
+	const limit = int64(4 << 20)
 	raw, err := io.ReadAll(io.LimitReader(response.Body, limit+1))
 	if err != nil || int64(len(raw)) > limit {
 		return nil, nil, ErrResponse

@@ -18,7 +18,7 @@ func reply(body string) *http.Response {
 }
 
 func TestBilibiliQRAndIdentity(t *testing.T) {
-	c, err := New("bilibili", "")
+	c, err := New("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,57 +65,18 @@ func TestBilibiliQRAndIdentity(t *testing.T) {
 	}
 }
 
-func TestQQCallbackIsDataAndStateIsBound(t *testing.T) {
-	args, err := qqParseCallback([]byte(`ptuiCB('0','0','https://evil.example/','0','ok','nick');`))
-	if err != nil || len(args) != 6 {
-		t.Fatal(err)
-	}
-	if _, _, err := qqSuccessIdentity(args[2]); err == nil {
-		t.Fatal("arbitrary confirmation URL accepted")
-	}
-	if _, err := qqParseCallback([]byte(`ptuiCB('0','0','x','0','ok','nick');fetch('/steal')`)); err == nil {
-		t.Fatal("JavaScript accepted")
-	}
-	if _, err := qqAuthorizationCode("https://y.qq.com/portal/wx_redirect.html?code=test&state=old", "new"); err == nil {
-		t.Fatal("old OAuth state accepted")
-	}
-}
-
-func TestQQCallbackAcceptsJavaScriptUnicodeStrings(t *testing.T) {
-	args, err := qqParseCallback([]byte(`ptuiCB('0','0','https:\/\/ssl.ptlogin2.graph.qq.com/check_sig?uin=42&ptsigx=test','0','ok','\ud83d\udc31');`))
-	if err != nil || args[5] != "🐱" {
-		t.Fatalf("valid JavaScript nickname rejected: %v", err)
-	}
-	args, err = qqParseCallback([]byte(`ptuiCB('0','0','https://ssl.ptlogin2.graph.qq.com/check_sig?uin=42&ptsigx=test','0','ok','Listener','0');`))
-	if err != nil || len(args) != 7 {
-		t.Fatalf("bounded extra response field rejected: %v", err)
-	}
-}
-
-func TestQQOfficialCallbackSpellingsRemainStateBound(t *testing.T) {
-	for _, prefix := range []string{"https://y.qq.com", "http://y.qq.com:80", "//y.qq.com", "https://y.qq.com:443"} {
-		code, err := qqAuthorizationCode(prefix+"/portal/wx_redirect.html?code=fixture&state=nonce", "nonce")
-		if err != nil || code != "fixture" {
-			t.Fatalf("official callback spelling: %v", err)
-		}
-		if _, err := qqAuthorizationCode(prefix+"/portal/wx_redirect.html?code=fixture&state=old", "nonce"); err == nil {
-			t.Fatal("state mismatch accepted")
-		}
-	}
-}
-
 func TestSessionValidationAndCopies(t *testing.T) {
-	c, _ := New("qq", "")
-	s := Session{ID: "42", Cookies: map[string]string{"uin": "42", "qqmusic_uin": "42", "qqmusic_key": "fixture", "qm_keyst": "fixture"}}
+	c, _ := New("")
+	s := Session{ID: "42", Cookies: map[string]string{"DedeUserID": "42", "SESSDATA": "fixture"}}
 	if err := c.UseSession(s); err != nil {
 		t.Fatal(err)
 	}
-	s.Cookies["qqmusic_key"] = "changed"
-	if c.sessionCopy().Cookies["qqmusic_key"] != "fixture" {
+	s.Cookies["SESSDATA"] = "changed"
+	if c.sessionCopy().Cookies["SESSDATA"] != "fixture" {
 		t.Fatal("session map aliases caller")
 	}
 	bad := c.sessionCopy()
-	bad.Cookies["qqmusic_key"] = "invalid; Domain=evil"
+	bad.Cookies["SESSDATA"] = "invalid; Domain=evil"
 	if err := c.UseSession(bad); err == nil {
 		t.Fatal("invalid cookie accepted")
 	}

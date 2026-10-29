@@ -1,5 +1,6 @@
-// Package platform owns QQ Music and Bilibili account sessions. Candidates
-// remain separate from the active session until the account manager commits.
+// Package platform owns the Bilibili account session, favourites and media.
+// Candidates remain separate from the active session until the account
+// manager commits them.
 package platform
 
 import (
@@ -50,27 +51,21 @@ type CollectionPage struct {
 	Total, Next int
 }
 
+// Client is the Bilibili adapter: anonymous search and playback, plus the
+// owner's favourites once an account is connected.
 type Client struct {
-	kind          string
-	direct, music *http.Client
-	mediaHTTP     *http.Client
-	publicQQ      source.QQ
-	publicKugou   source.Kugou
-	publicMigu    source.Migu
-	mu            sync.RWMutex
-	session       Session
-	media         map[string]mediaEntry
-	wbiKey        string
-	wbiUntil      time.Time
-	guestCookies  map[string]string
-	guestUntil    time.Time
-	pendingDir    string
+	direct       *http.Client
+	mediaHTTP    *http.Client
+	mu           sync.RWMutex
+	session      Session
+	media        map[string]mediaEntry
+	wbiKey       string
+	wbiUntil     time.Time
+	guestCookies map[string]string
+	guestUntil   time.Time
 }
 
-func New(kind, proxyURL string) (*Client, error) {
-	if kind != "qq" && kind != "bilibili" && kind != "kugou" && kind != "migu" {
-		return nil, errors.New("unknown music platform")
-	}
+func New(proxyURL string) (*Client, error) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.Proxy = nil
 	if proxyURL != "" {
@@ -80,18 +75,12 @@ func New(kind, proxyURL string) (*Client, error) {
 		}
 		transport.Proxy = http.ProxyURL(proxy)
 	}
-	musicTransport := transport.Clone()
 	noRedirect := func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	direct := &http.Client{Transport: transport, Timeout: 15 * time.Second, CheckRedirect: noRedirect}
-	music := &http.Client{Transport: musicTransport, Timeout: 15 * time.Second, CheckRedirect: noRedirect}
-	public, err := source.NewHTTP(proxyURL, 12*time.Second)
-	if err != nil {
-		return nil, err
-	}
-	return &Client{kind: kind, direct: direct, music: music, mediaHTTP: mediaClient(), publicQQ: source.QQ{HTTP: public}, publicKugou: source.Kugou{HTTP: public}, publicMigu: source.Migu{HTTP: public, RecommendHTTP: public}, media: map[string]mediaEntry{}}, nil
+	return &Client{direct: direct, mediaHTTP: mediaClient(), media: map[string]mediaEntry{}}, nil
 }
 
-func (c *Client) Name() string     { return c.kind }
+func (c *Client) Name() string     { return "bilibili" }
 func (c *Client) Identity() string { c.mu.RLock(); defer c.mu.RUnlock(); return c.session.ID }
 func (c *Client) sessionCopy() Session {
 	c.mu.RLock()
@@ -119,12 +108,6 @@ func validCookie(s string) bool {
 	return true
 }
 func (c *Client) validate(s Session) error {
-	if c.kind == "kugou" {
-		return kugouValidate(s)
-	}
-	if c.kind == "migu" {
-		return MiguValidateSession(s)
-	}
 	if !numericID.MatchString(s.ID) || len(s.Cookies) > 12 {
 		return ErrExpired
 	}
@@ -132,18 +115,11 @@ func (c *Client) validate(s Session) error {
 		if !validCookie(v) {
 			return ErrExpired
 		}
-		if c.kind == "qq" {
-			if k != "uin" && k != "qqmusic_uin" && k != "qqmusic_key" && k != "qm_keyst" {
-				return ErrExpired
-			}
-		} else if k != "SESSDATA" && k != "bili_jct" && k != "DedeUserID" && k != "DedeUserID__ckMd5" && k != "buvid3" && k != "buvid4" {
+		if k != "SESSDATA" && k != "bili_jct" && k != "DedeUserID" && k != "DedeUserID__ckMd5" && k != "buvid3" && k != "buvid4" {
 			return ErrExpired
 		}
 	}
-	if c.kind == "qq" && (s.Cookies["uin"] != s.ID || s.Cookies["qqmusic_uin"] != s.ID || s.Cookies["qqmusic_key"] == "" || s.Cookies["qm_keyst"] != s.Cookies["qqmusic_key"]) {
-		return ErrExpired
-	}
-	if c.kind == "bilibili" && (s.Cookies["SESSDATA"] == "" || s.Cookies["DedeUserID"] != s.ID) {
+	if s.Cookies["SESSDATA"] == "" || s.Cookies["DedeUserID"] != s.ID {
 		return ErrExpired
 	}
 	return nil
@@ -172,42 +148,13 @@ func (c *Client) Account(ctx context.Context) (Profile, error) {
 	}
 	return c.Verify(ctx, s)
 }
-func (c *Client) Start(ctx context.Context) (Login, error) {
-	if c.kind == "kugou" {
-		return c.kugouStart(ctx)
-	}
-	if c.kind == "migu" {
-		return Login{}, errors.New("请使用手机验证码连接咪咕")
-	}
-	if c.kind == "qq" {
-		return c.qqStart(ctx)
-	}
-	return c.biliStart(ctx)
-}
+func (c *Client) Start(ctx context.Context) (Login, error) { return c.biliStart(ctx) }
 func (c *Client) Poll(ctx context.Context, key string) (LoginResult, error) {
-	if c.kind == "kugou" {
-		return c.kugouPoll(ctx, key)
-	}
-	if c.kind == "migu" {
-		return LoginResult{}, ErrResponse
-	}
-	if c.kind == "qq" {
-		return c.qqPoll(ctx, key)
-	}
 	return c.biliPoll(ctx, key)
 }
 func (c *Client) Verify(ctx context.Context, s Session) (Profile, error) {
 	if err := c.validate(s); err != nil {
 		return Profile{}, err
-	}
-	if c.kind == "kugou" {
-		return c.kugouVerify(ctx, s)
-	}
-	if c.kind == "migu" {
-		return c.miguVerify(ctx, s)
-	}
-	if c.kind == "qq" {
-		return c.qqVerify(ctx, s)
 	}
 	return c.biliVerify(ctx, s)
 }

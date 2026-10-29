@@ -90,34 +90,20 @@ func run(log *slog.Logger, listen, dbFile, sessionFile, cnProxy, webDir, gateway
 	server.NetEase, server.NetEaseUID = client, session.UserID
 	connections.NetEase, connections.SeedHash = client, accounts.SeedHash(seed)
 	providers = append(providers, source.NetEase{Client: client, Level: "exhigh"})
-	// Priority after NetEase follows the coverage probe of 2026-10-22.
-	qq, err := platform.New("qq", cnProxy)
+	// After NetEase, providers are tried in order of how often they have a
+	// full-length copy. QQ Music, Kuwo, Kugou and Migu are used anonymously.
+	bili, err := platform.New(cnProxy)
 	if err != nil {
 		return err
 	}
-	bili, err := platform.New("bilibili", cnProxy)
-	if err != nil {
-		return err
-	}
-	kugou, err := platform.New("kugou", cnProxy)
-	if err != nil {
-		return err
-	}
-	migu, err := platform.New("migu", cnProxy)
-	if err != nil {
-		return err
-	}
-	// QQ/Kugou/Migu stay anonymous providers; their declined account flows
-	// are neither restored nor registered. Existing files are left untouched.
 	connections.Platforms = map[string]accounts.Platform{"bilibili": bili}
 	server.Platforms = map[string]api.PlatformLibrary{"bilibili": bili}
-	for _, kind := range []string{"bilibili"} {
-		if err := connections.RestorePlatform(kind); err != nil {
-			log.Warn("account restore unavailable", "platform", kind)
-		}
+	if err := connections.RestorePlatform("bilibili"); err != nil {
+		log.Warn("account restore unavailable", "platform", "bilibili")
 	}
 	providers = append(providers,
-		qq, source.Kuwo{HTTP: transport}, kugou, migu)
+		source.QQ{HTTP: transport}, source.Kuwo{HTTP: transport}, source.Kugou{HTTP: transport},
+		source.Migu{HTTP: transport})
 	if ytConfig.Binary != "" {
 		yt, err := youtube.New(ytConfig)
 		if err != nil {

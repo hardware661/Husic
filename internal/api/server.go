@@ -92,6 +92,7 @@ func (s *Server) Handler() http.Handler {
 		}
 		writeJSON(w, http.StatusOK, status)
 	})
+	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) { fail(w, http.StatusNotFound, "not found") })
 	mux.Handle("/", s.static())
 	return s.gate(mux)
 }

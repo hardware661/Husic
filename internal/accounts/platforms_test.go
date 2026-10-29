@@ -50,7 +50,7 @@ func (p *fakePlatform) UseSession(s platform.Session) error {
 func (p *fakePlatform) Identity() string { p.mu.Lock(); defer p.mu.Unlock(); return p.id }
 
 func TestPlatformCancelledPollCannotReplaceSession(t *testing.T) {
-	for _, kind := range []string{"qq", "bilibili"} {
+	for _, kind := range []string{"bilibili"} {
 		t.Run(kind, func(t *testing.T) {
 			p := &fakePlatform{id: "42", entered: make(chan struct{}), release: make(chan struct{})}
 			m := Manager{Dir: t.TempDir(), Platforms: map[string]Platform{kind: p}}
@@ -75,8 +75,8 @@ func TestPlatformCancelledPollCannotReplaceSession(t *testing.T) {
 }
 func TestPlatformCandidateCommitAndRestore(t *testing.T) {
 	p := &fakePlatform{}
-	m := Manager{Dir: t.TempDir(), Platforms: map[string]Platform{"qq": p}}
-	a, err := m.StartPlatform(context.Background(), "qq")
+	m := Manager{Dir: t.TempDir(), Platforms: map[string]Platform{"bilibili": p}}
+	a, err := m.StartPlatform(context.Background(), "bilibili")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,27 +84,27 @@ func TestPlatformCandidateCommitAndRestore(t *testing.T) {
 	if strings.Contains(string(body), "private-") {
 		t.Fatal("private login state exposed")
 	}
-	if image, err := m.PlatformQR("qq", a.ID); err != nil || len(image) == 0 {
+	if image, err := m.PlatformQR("bilibili", a.ID); err != nil || len(image) == 0 {
 		t.Fatal("QR missing", err)
 	}
-	connected, err := m.CheckPlatform(context.Background(), "qq", a.ID)
+	connected, err := m.CheckPlatform(context.Background(), "bilibili", a.ID)
 	if err != nil || connected.State != "connected" {
 		t.Fatalf("%+v %v", connected, err)
 	}
-	_, _ = m.CheckPlatform(context.Background(), "qq", a.ID)
+	_, _ = m.CheckPlatform(context.Background(), "bilibili", a.ID)
 	if p.used != 1 || p.polls != 1 {
 		t.Fatal("candidate applied twice")
 	}
-	info, err := os.Stat(filepath.Join(m.Dir, "qq-session.json"))
+	info, err := os.Stat(filepath.Join(m.Dir, "bilibili-session.json"))
 	if err != nil || info.Mode().Perm() != 0600 {
 		t.Fatal("session permissions", err)
 	}
-	if _, err = m.PlatformQR("qq", a.ID); err == nil {
+	if _, err = m.PlatformQR("bilibili", a.ID); err == nil {
 		t.Fatal("consumed QR still exposed")
 	}
 	p2 := &fakePlatform{}
-	restored := Manager{Dir: m.Dir, Platforms: map[string]Platform{"qq": p2}}
-	if err := restored.RestorePlatform("qq"); err != nil || p2.Identity() != "42" {
+	restored := Manager{Dir: m.Dir, Platforms: map[string]Platform{"bilibili": p2}}
+	if err := restored.RestorePlatform("bilibili"); err != nil || p2.Identity() != "42" {
 		t.Fatal("restore", err)
 	}
 }

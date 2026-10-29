@@ -6,13 +6,11 @@ import (
 	"strconv"
 
 	"music/internal/platform"
-	"music/internal/source"
 )
 
 type PlatformLibrary interface {
 	Collections(context.Context) ([]platform.Collection, error)
 	Collection(context.Context, string, int) (platform.CollectionPage, error)
-	Recommendations(context.Context) ([]source.Track, error)
 	Video(context.Context, string) (platform.Video, error)
 	http.Handler
 }

@@ -2,6 +2,8 @@ package api
 
 import (
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -10,7 +12,7 @@ import (
 )
 
 func TestExpiredPlatformAttemptIsGoneNotGatewayFailure(t *testing.T) {
-	client, _ := platform.New("bilibili", "")
+	client, _ := platform.New("")
 	s := Server{Accounts: &accounts.Manager{Platforms: map[string]accounts.Platform{"bilibili": client}}}
 	r := httptest.NewRequest("POST", "http://music.test/api/accounts/bilibili/login/absent/check", strings.NewReader("{}"))
 	r.RemoteAddr = "127.0.0.1:12345"
@@ -23,19 +25,19 @@ func TestExpiredPlatformAttemptIsGoneNotGatewayFailure(t *testing.T) {
 	}
 }
 
-func TestUnusedAccountEndpointsCannotStartOrFinishLogin(t *testing.T) {
-	s := Server{Accounts: &accounts.Manager{}}
-	for _, kind := range []string{"qq", "kugou", "migu"} {
-		for _, endpoint := range []struct{ method, suffix string }{{"POST", "login"}, {"POST", "login/old/check"}, {"POST", "login/old/complete"}, {"GET", "login/old/qr"}, {"GET", "collections"}, {"GET", "recommendations"}} {
-			r := httptest.NewRequest(endpoint.method, "http://music.test/api/accounts/"+kind+"/"+endpoint.suffix, strings.NewReader("{}"))
-			r.RemoteAddr = "127.0.0.1:12345"
-			r.Header.Set("Content-Type", "application/json")
-			r.Header.Set("Origin", "http://music.test")
-			w := httptest.NewRecorder()
-			s.Handler().ServeHTTP(w, r)
-			if w.Code != 410 || !strings.Contains(w.Body.String(), "账号连接已停用") {
-				t.Errorf("%s %s: got %d", kind, endpoint.suffix, w.Code)
-			}
+func TestUnknownAPIPathsAreNotServedTheAppShell(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "index.html"), []byte("<!doctype html>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	s := Server{Accounts: &accounts.Manager{}, WebDir: dir}
+	for _, path := range []string{"/api/accounts/qq/login", "/api/accounts/kugou/collections", "/api/nothing"} {
+		r := httptest.NewRequest("GET", "http://music.test"+path, nil)
+		r.RemoteAddr = "127.0.0.1:12345"
+		w := httptest.NewRecorder()
+		s.Handler().ServeHTTP(w, r)
+		if w.Code != 404 || !strings.HasPrefix(w.Header().Get("Content-Type"), "application/json") {
+			t.Errorf("%s: got %d %q", path, w.Code, w.Header().Get("Content-Type"))
 		}
 	}
 }

@@ -48,10 +48,7 @@ var ErrAttemptGone = errors.New("这次连接已结束，请重新开始")
 type Snapshot struct {
 	NetEase  Status                   `json:"netease"`
 	YouTube  youtube.ConnectionStatus `json:"youtube"`
-	QQ       Status                   `json:"qq"`
 	Bilibili Status                   `json:"bilibili"`
-	Kugou    Status                   `json:"kugou"`
-	Migu     Status                   `json:"migu"`
 }
 
 type Attempt struct {
@@ -64,8 +61,6 @@ type Attempt struct {
 	image    []byte
 	consumed bool
 	checked  time.Time
-	phone    string
-	tries    int
 	reported string
 	mu       *sync.Mutex
 	ctx      context.Context
@@ -85,7 +80,6 @@ type Manager struct {
 	checked         time.Time
 	platformStatus  map[string]Status
 	platformChecked map[string]time.Time
-	miguSent        map[string]time.Time
 }
 
 type Platform interface {
@@ -154,7 +148,7 @@ func (m *Manager) Status(ctx context.Context) Snapshot {
 		yt = m.YouTube.Details()
 	}
 	other := m.platformStatuses(ctx)
-	return Snapshot{NetEase: status, YouTube: yt, QQ: other["qq"], Bilibili: other["bilibili"], Kugou: other["kugou"], Migu: other["migu"]}
+	return Snapshot{NetEase: status, YouTube: yt, Bilibili: other["bilibili"]}
 }
 
 func (m *Manager) newAttempt(kind, key string) (Attempt, error) {

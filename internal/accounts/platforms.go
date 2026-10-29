@@ -17,7 +17,7 @@ import (
 )
 
 func platformKind(kind string) bool {
-	return kind == "qq" || kind == "bilibili" || kind == "kugou" || kind == "migu"
+	return kind == "bilibili"
 }
 func (m *Manager) RestorePlatform(kind string) error {
 	if !platformKind(kind) || m.Platforms[kind] == nil || m.Dir == "" {
@@ -41,7 +41,7 @@ func (m *Manager) platformStatuses(ctx context.Context) map[string]Status {
 	var wg sync.WaitGroup
 	var lock sync.Mutex
 	out := map[string]Status{}
-	for _, kind := range []string{"qq", "bilibili", "kugou", "migu"} {
+	for _, kind := range []string{"bilibili"} {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

@@ -11,7 +11,7 @@ import (
 )
 
 func TestBilibiliPartCannotSilentlyBecomeP1(t *testing.T) {
-	c, _ := New("bilibili", "")
+	c, _ := New("")
 	c.direct.Transport = roundTrip(func(r *http.Request) (*http.Response, error) {
 		if r.URL.Path == "/x/frontend/finger/spi" {
 			return reply(`{"code":0,"data":{"b_3":"platform-issued-guest"}}`), nil
@@ -32,7 +32,7 @@ func TestBilibiliMediaRejectsOtherOriginsAndRanges(t *testing.T) {
 			t.Fatal("unsafe URL accepted", raw)
 		}
 	}
-	c, _ := New("bilibili", "")
+	c, _ := New("")
 	path, err := c.registerMedia("https://audio.bilivideo.com/audio.m4a?sign=fixture")
 	if err != nil {
 		t.Fatal(err)

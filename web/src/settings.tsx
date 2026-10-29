@@ -10,9 +10,9 @@ import { toast } from './toast';
 import { Link } from './router';
 import { SleepTimerControl } from './sleep-timer-control';
 
-const qrNames: Record<QRKind, string> = { netease: '网易云', qq: 'QQ 音乐', bilibili: 'B 站', kugou: '酷狗音乐' };
-const qrApps: Record<QRKind, string> = { netease: '网易云音乐', qq: 'QQ', bilibili: '哔哩哔哩', kugou: '酷狗音乐' };
-const isQR = (kind: string | null): kind is QRKind => kind === 'netease' || kind === 'qq' || kind === 'bilibili' || kind === 'kugou';
+const qrNames: Record<QRKind, string> = { netease: '网易云', bilibili: 'B 站' };
+const qrApps: Record<QRKind, string> = { netease: '网易云音乐', bilibili: '哔哩哔哩' };
+const isQR = (kind: string | null): kind is QRKind => kind === 'netease' || kind === 'bilibili';
 
 type BridgeReply = { ok: boolean; error?: string; attempt?: ConnectionAttempt };
 function connector(action: 'ping' | 'start' | 'complete' | 'cancel', id = ''): Promise<BridgeReply> {
