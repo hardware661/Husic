@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -37,13 +38,19 @@ func main() {
 	webDir := option("web", "web/dist", "built web app")
 	gatewayHeader := option("gateway-header", "X-Husic-Gateway", "header the edge proxy sets")
 	gatewayKeyFile := option("gateway-key-file", "", "file holding the edge proxy's proof (empty: loopback only)")
+	allowRemote := option("allow-remote", "false", "serve clients other than this machine without a gateway key; only on a private network")
 	ytBinary := option("youtube-tool", "", "absolute path of yt-dlp (empty: YouTube disabled)")
 	ytDeno := option("youtube-deno", "", "absolute path of Deno, required with -youtube-tool")
 	ytCookies := option("youtube-cookies", "", "YouTube-only cookie import")
 	ytState := option("youtube-state", "", "private writable YouTube session/cache directory, required with -youtube-tool")
 	flag.Parse()
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	if err := run(log, *listen, *dbFile, *sessionFile, *cnProxy, *webDir, *gatewayHeader, *gatewayKeyFile, *accountState, youtube.Config{Binary: *ytBinary, Deno: *ytDeno, Cookies: *ytCookies, StateDir: *ytState}); err != nil {
+	remote, err := strconv.ParseBool(*allowRemote)
+	if err != nil {
+		log.Error("husic stopped", "err", "-allow-remote must be true or false")
+		os.Exit(2)
+	}
+	if err := run(log, *listen, *dbFile, *sessionFile, *cnProxy, *webDir, *gatewayHeader, *gatewayKeyFile, remote, *accountState, youtube.Config{Binary: *ytBinary, Deno: *ytDeno, Cookies: *ytCookies, StateDir: *ytState}); err != nil {
 		log.Error("husic stopped", "err", err)
 		os.Exit(1)
 	}
@@ -58,7 +65,7 @@ func option(name, value, usage string) *string {
 	return flag.String(name, value, usage+" ($"+env+")")
 }
 
-func run(log *slog.Logger, listen, dbFile, sessionFile, cnProxy, webDir, gatewayHeader, gatewayKeyFile, accountState string, ytConfig youtube.Config) error {
+func run(log *slog.Logger, listen, dbFile, sessionFile, cnProxy, webDir, gatewayHeader, gatewayKeyFile string, allowRemote bool, accountState string, ytConfig youtube.Config) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -88,7 +95,7 @@ func run(log *slog.Logger, listen, dbFile, sessionFile, cnProxy, webDir, gateway
 	if err != nil {
 		return err
 	}
-	server := &api.Server{Store: db, WebDir: webDir, Log: log, GatewayHeader: gatewayHeader}
+	server := &api.Server{Store: db, WebDir: webDir, Log: log, GatewayHeader: gatewayHeader, AllowRemote: allowRemote}
 	if gatewayKeyFile != "" {
 		if server.GatewayKey, err = readSecret("-gateway-key-file", gatewayKeyFile); err != nil {
 			return err

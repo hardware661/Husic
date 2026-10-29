@@ -1,0 +1,35 @@
+# Husic with PostgreSQL: docker compose -f compose.postgres.yaml up -d
+# Same as compose.yaml, but the library lives in a PostgreSQL database.
+services:
+  husic:
+    build: .
+    image: husic:local
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:18788:18788"
+    environment:
+      HUSIC_ALLOW_REMOTE: "true"
+      HUSIC_DB: postgres://husic:husic@db:5432/husic?sslmode=disable
+    volumes:
+      - husic-data:/data
+
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: husic
+      POSTGRES_PASSWORD: husic # reachable only inside this compose network
+      POSTGRES_DB: husic
+    volumes:
+      - husic-postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U husic"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  husic-data:
+  husic-postgres:

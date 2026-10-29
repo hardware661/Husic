@@ -41,3 +41,22 @@ func TestUnknownAPIPathsAreNotServedTheAppShell(t *testing.T) {
 		}
 	}
 }
+
+func TestRemoteClientsNeedGatewayOrExplicitOptIn(t *testing.T) {
+	ask := func(s *Server) int {
+		r := httptest.NewRequest("GET", "http://music.test/api/health", nil)
+		r.RemoteAddr = "172.17.0.1:40000"
+		w := httptest.NewRecorder()
+		s.Handler().ServeHTTP(w, r)
+		return w.Code
+	}
+	if code := ask(&Server{}); code != 403 {
+		t.Fatalf("remote client without opt-in: %d", code)
+	}
+	if code := ask(&Server{AllowRemote: true}); code != 200 {
+		t.Fatalf("remote client with opt-in: %d", code)
+	}
+	if code := ask(&Server{AllowRemote: true, GatewayKey: "k", GatewayHeader: "X-Husic-Gateway"}); code != 403 {
+		t.Fatalf("a gateway key still applies: %d", code)
+	}
+}

@@ -1,0 +1,23 @@
+# One-command Husic: docker compose up -d, then open http://127.0.0.1:18788
+#
+# The library lives in one SQLite file in the husic-data volume. To use
+# PostgreSQL instead: docker compose -f compose.postgres.yaml up -d
+#
+# The port is published on this machine only. Husic is a personal player
+# with no user accounts: put a login in front of it before exposing it to
+# the internet (see README, "Run it on a server").
+services:
+  husic:
+    build: .
+    image: husic:local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18788:18788"
+    environment:
+      HUSIC_ALLOW_REMOTE: "true" # requests reach the container from Docker's own network
+      # HUSIC_CN_PROXY: socks5h://host.docker.internal:1080  # optional, see README
+    volumes:
+      - husic-data:/data
+
+volumes:
+  husic-data:

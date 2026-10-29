@@ -32,9 +32,12 @@ type Server struct {
 	Platforms map[string]PlatformLibrary
 	NetEase   *netease.Client
 	// GatewayHeader/GatewayKey: the edge proxy proves the request passed the
-	// shared login. Without a key only loopback clients are served.
+	// shared login. Without a key only loopback clients are served, unless
+	// AllowRemote says the network in front is already private (a container
+	// port published on localhost, a home LAN, a VPN).
 	GatewayHeader string
 	GatewayKey    string
+	AllowRemote   bool
 	WebDir        string
 	YouTube       interface {
 		http.Handler
@@ -103,7 +106,7 @@ func (s *Server) gate(next http.Handler) http.Handler {
 				http.Error(w, "forbidden", http.StatusForbidden)
 				return
 			}
-		} else if host, _, err := net.SplitHostPort(r.RemoteAddr); err != nil || !net.ParseIP(host).IsLoopback() {
+		} else if host, _, err := net.SplitHostPort(r.RemoteAddr); !s.AllowRemote && (err != nil || !net.ParseIP(host).IsLoopback()) {
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
