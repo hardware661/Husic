@@ -12,20 +12,23 @@ import { CollectionCover } from './collection-cover';
 import { useLocalAudio } from './local-audio';
 import { PlaylistActions } from './playlist-actions';
 
-/** Loads data for a page; reloads when deps change. */
-function useLoad<T>(load: () => Promise<T>, deps: unknown[]) {
-  const [state, setState] = useState<{ data?: T; error?: string; loading: boolean }>({ loading: true });
+/** Loads data for a page. `what` names the content (say, a playlist id):
+ * data loaded for something else is never shown for it. `version` only asks
+ * for a fresh copy of the same content, which stays visible meanwhile. */
+function useLoad<T>(load: () => Promise<T>, what: unknown[], version = 0): { data?: T; error?: string; loading: boolean } {
+  const key = JSON.stringify(what);
+  const [state, setState] = useState<{ key: string; data?: T; error?: string; loading: boolean }>({ key, loading: true });
   useEffect(() => {
     let alive = true;
-    setState((s) => ({ ...s, loading: true }));
+    setState((s) => (s.key === key ? { ...s, loading: true } : { key, loading: true }));
     load()
-      .then((data) => alive && setState({ data, loading: false }))
-      .catch((e: Error) => alive && setState((current) => ({ ...current, error: e.message, loading: false })));
+      .then((data) => alive && setState({ key, data, loading: false }))
+      .catch((e: Error) => alive && setState((current) => ({ ...current, key, error: e.message, loading: false })));
     return () => {
       alive = false;
     };
-  }, deps); // eslint-disable-line react-hooks/exhaustive-deps
-  return state;
+  }, [key, version]); // eslint-disable-line react-hooks/exhaustive-deps
+  return state.key === key ? state : { loading: true };
 }
 
 function Loading() {
@@ -93,7 +96,7 @@ export function Library() {
 
 export function Liked() {
   const { version } = useLibrary();
-  const { data, error, loading } = useLoad(() => api.library(), [version]);
+  const { data, error, loading } = useLoad(() => api.library(), [], version);
   const { records, loading: localLoading, error: localError } = useLocalAudio();
   const songs = [...records.filter((record) => record.liked).map((record) => record.item), ...(data?.likes ?? [])];
   if ((loading && !data || localLoading) && songs.length === 0) return <Loading />;
@@ -124,7 +127,7 @@ export function Recent() {
 
 export function PlaylistPage({ id }: { id: number }) {
   const { version, refresh, renamePlaylist } = useLibrary();
-  const { data, error, loading } = useLoad(() => api.playlist(id), [id, version]);
+  const { data, error, loading } = useLoad(() => api.playlist(id), [id], version);
   const [removed, setRemoved] = useState<Set<number>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [renaming, setRenaming] = useState(false);

@@ -30,7 +30,7 @@ import (
 
 func main() {
 	listen := option("listen", "127.0.0.1:18788", "address to serve on")
-	dbFile := option("db-file", "", "file holding the PostgreSQL URL (or set HUSIC_DB to the URL itself)")
+	dbFile := option("db-file", "", "file holding the database URL (or set HUSIC_DB to the URL itself)")
 	sessionFile := option("netease-session", "", "NetEase session file (optional)")
 	accountState := option("account-state", "", "private writable directory for account connections (required)")
 	cnProxy := option("cn-proxy", "", "proxy with a mainland exit for Chinese platforms, e.g. socks5h://127.0.0.1:18789")
@@ -70,7 +70,7 @@ func run(log *slog.Logger, listen, dbFile, sessionFile, cnProxy, webDir, gateway
 		}
 	}
 	if dsn == "" {
-		return errors.New("no database: set HUSIC_DB to a PostgreSQL URL, or -db-file to a file holding one")
+		return errors.New("no database: set HUSIC_DB to postgres://… or sqlite:/path/to/husic.db, or -db-file to a file holding one")
 	}
 	if err := privateDir("-account-state", accountState); err != nil {
 		return err

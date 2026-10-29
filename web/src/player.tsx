@@ -6,11 +6,12 @@ import { useDesktopLyrics } from './desktop-lyrics';
 import { localAudioID, localAudioStream, recordLocalAudioPlay } from './local-audio';
 import { consumeExpiredSleepTimer, useSleepTimerPlayback } from './sleep-timer';
 import { usePageVisible } from './view-activity';
+import { nextIndex as nextInQueue, orderAfterAppend, orderAfterInsertNext, orderAfterRemove, shuffled } from './queue';
 
 // One <audio> element for the whole app life: iOS keeps playing in the
 // background and on the lock screen only if the same element is reused.
 
-export type Repeat = 'off' | 'all' | 'one';
+export type Repeat = 'all' | 'one';
 
 type PlayerState = {
   queue: Item[];
@@ -335,7 +336,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setBlindSession(null);
       refill.current = null;
       setRadio(false);
-      setState(s=>({...s,repeat:playable.length===1?'one':'all'}));
       order.current = shuffled(playable.length, start);
       load(playable, start);
     },
@@ -439,12 +439,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const playNext = useCallback((item: Item) => {
     const inspect = inspectionID(item);
     if (inspect) { navigate(`/bilibili/${encodeURIComponent(inspect)}`); toast('先选择要听的分P'); return; }
+    // Capture once: React StrictMode can evaluate the updater twice.
+    const before = [...order.current];
     setState((s) => {
       if (!s.current) return s;
       const queue = [...s.queue];
       queue.splice(s.index + 1, 0, item);
-      order.current = shuffled(queue.length, s.index);
-      return { ...s, queue, repeat: s.queue.length === 1 ? 'all' : s.repeat };
+      order.current = orderAfterInsertNext(before, s.queue.length, s.index) ?? shuffled(queue.length, s.index);
+      return { ...s, queue };
     });
     toast('接下来播放');
   }, []);
@@ -452,16 +454,20 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const addToQueue = useCallback((item: Item) => {
     const inspect = inspectionID(item);
     if (inspect) { navigate(`/bilibili/${encodeURIComponent(inspect)}`); toast('先选择要听的分P'); return; }
-    setState((s) => ({ ...s, queue: [...s.queue, item], repeat: s.queue.length === 1 ? 'all' : s.repeat }));
-    order.current.push(stateRef.current.queue.length);
+    const before = [...order.current];
+    setState((s) => {
+      order.current = orderAfterAppend(before, s.queue.length) ?? shuffled(s.queue.length + 1, s.index);
+      return { ...s, queue: [...s.queue, item] };
+    });
     toast('已加入待播');
   }, []);
 
   const removeAt = useCallback((index: number) => {
+    const before = [...order.current];
     setState((s) => {
       if (index === s.index) return s;
       const queue = s.queue.filter((_, i) => i !== index);
-      order.current = shuffled(queue.length, index < s.index ? s.index - 1 : s.index);
+      order.current = orderAfterRemove(before, s.queue.length, index) ?? shuffled(queue.length, index < s.index ? s.index - 1 : s.index);
       return { ...s, queue, index: index < s.index ? s.index - 1 : s.index };
     });
   }, []);
@@ -510,25 +516,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }
 
-function shuffled(length: number, first: number) {
-  const rest = Array.from({ length }, (_, i) => i).filter((i) => i !== first);
-  for (let i = rest.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [rest[i], rest[j]] = [rest[j], rest[i]];
-  }
-  return length > 0 ? [first, ...rest] : [];
-}
-
-/** The index after the current one, honouring shuffle and repeat. */
-function nextIndex(length: number, index: number, s: Pick<PlayerState, 'shuffle' | 'repeat'>, order: number[], wrap: boolean) {
-  if (length === 0) return null;
-  if (s.shuffle && order.length === length) {
-    const position = order.indexOf(index);
-    if (position + 1 < order.length) return order[position + 1];
-    return wrap ? order[0] : null;
-  }
-  if (index + 1 < length) return index + 1;
-  return wrap ? 0 : null;
+/** The index after the current one, honouring shuffle. */
+function nextIndex(length: number, index: number, s: Pick<PlayerState, 'shuffle'>, order: number[], wrap: boolean) {
+  return nextInQueue(length, index, s.shuffle, order, wrap);
 }
 
 /** Lock screen, Control Center and headphone buttons. */

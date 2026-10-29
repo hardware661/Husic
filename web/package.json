@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5190 --strictPort",
     "build": "python3 ../connect/build.py --keep && tsc -b && vite build",
-    "check": "tsc -b"
+    "check": "tsc -b",
+    "test": "node --experimental-strip-types --test unit/*.test.ts"
   },
   "dependencies": {
     "react": "^19.0.0",

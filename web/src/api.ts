@@ -111,9 +111,15 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
     body: body === undefined ? undefined : JSON.stringify(body),
     credentials: 'same-origin',
   });
-  if (response.status === 401 || response.redirected) {
-    // The shared login expired: let the edge send us through it again.
-    location.reload();
+  if (response.status === 401 || (response.redirected && new URL(response.url).origin !== location.origin)) {
+    // A login gateway in front of Husic wants the page again. Reload once a
+    // minute at most, so a gateway that keeps refusing cannot loop forever.
+    const last = Number(sessionStorage.getItem('husic-login-reload') || 0);
+    if (Date.now() - last > 60_000) {
+      sessionStorage.setItem('husic-login-reload', String(Date.now()));
+      location.reload();
+    }
+    throw new ApiError(401, '需要重新登录');
   }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new ApiError(response.status, data.error ?? response.statusText);
