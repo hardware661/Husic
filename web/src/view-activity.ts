@@ -15,10 +15,21 @@ function update() {
   visible = next;
   listeners.forEach((listener) => listener());
 }
-function visibility() { if (!document.hidden) suspended = false; update(); }
-function suspend() { suspended = true; update(); }
-function resume() { suspended = false; update(); }
-function focus() { resume(); }
+function visibility() {
+  if (!document.hidden) suspended = false;
+  update();
+}
+function suspend() {
+  suspended = true;
+  update();
+}
+function resume() {
+  suspended = false;
+  update();
+}
+function focus() {
+  resume();
+}
 function subscribe(listener: () => void) {
   listeners.add(listener);
   if (listeners.size === 1) {
@@ -41,4 +52,6 @@ function subscribe(listener: () => void) {
     window.removeEventListener('focus', focus);
   };
 }
-export function usePageVisible() { return useSyncExternalStore(subscribe, () => visible); }
+export function usePageVisible() {
+  return useSyncExternalStore(subscribe, () => visible);
+}

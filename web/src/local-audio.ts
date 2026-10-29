@@ -27,10 +27,17 @@ export type AudioDownload = {
 
 const MAX_AUDIO_BYTES = 512 * 1024 * 1024;
 const AUDIO_TYPES: Record<string, string> = {
-  mp3: 'audio/mpeg', wav: 'audio/wav', flac: 'audio/flac', aac: 'audio/aac',
-  m4a: 'audio/mp4', ogg: 'audio/ogg', opus: 'audio/ogg', webm: 'audio/webm',
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  flac: 'audio/flac',
+  aac: 'audio/aac',
+  m4a: 'audio/mp4',
+  ogg: 'audio/ogg',
+  opus: 'audio/ogg',
+  webm: 'audio/webm',
 };
-export const localAudioAccept = '.mp3,.wav,.flac,.aac,.m4a,.ogg,.opus,.webm,audio/mpeg,audio/wav,audio/flac,audio/aac,audio/mp4,audio/ogg,audio/webm';
+export const localAudioAccept =
+  '.mp3,.wav,.flac,.aac,.m4a,.ogg,.opus,.webm,audio/mpeg,audio/wav,audio/flac,audio/aac,audio/mp4,audio/ogg,audio/webm';
 const AUDIO_CHANGE = 'local-audio-change';
 const recordListeners = new Set<() => void>();
 const downloadListeners = new Set<() => void>();
@@ -57,7 +64,10 @@ function message(error: unknown, fallback = '没有保存成功，请稍后再�
 function openDatabase() {
   if (database) return database;
   database = new Promise<IDBDatabase>((resolve, reject) => {
-    if (!globalThis.indexedDB) { reject(new Error('当前环境不支持本地音乐存储')); return; }
+    if (!globalThis.indexedDB) {
+      reject(new Error('当前环境不支持本地音乐存储'));
+      return;
+    }
     const request = indexedDB.open('husic-local-audio', 1);
     request.onupgradeneeded = () => {
       request.result.createObjectStore('records', { keyPath: 'id' });
@@ -65,11 +75,20 @@ function openDatabase() {
     };
     request.onsuccess = () => {
       const db = request.result;
-      db.onversionchange = () => { db.close(); database = undefined; };
+      db.onversionchange = () => {
+        db.close();
+        database = undefined;
+      };
       resolve(db);
     };
-    request.onerror = () => { database = undefined; reject(request.error ?? new Error('无法打开本地音乐库')); };
-    request.onblocked = () => { database = undefined; reject(new Error('本地音乐库正在更新，请关闭其它 Husic 窗口后重试')); };
+    request.onerror = () => {
+      database = undefined;
+      reject(request.error ?? new Error('无法打开本地音乐库'));
+    };
+    request.onblocked = () => {
+      database = undefined;
+      reject(new Error('本地音乐库正在更新，请关闭其它 Husic 窗口后重试'));
+    };
   });
   return database;
 }
@@ -77,7 +96,8 @@ function openDatabase() {
 function transactionComplete(transaction: IDBTransaction): Promise<void> {
   return new Promise((resolve, reject) => {
     transaction.oncomplete = () => resolve();
-    transaction.onerror = event => reject((event.target as IDBRequest | null)?.error ?? transaction.error ?? new Error('本地音乐保存失败'));
+    transaction.onerror = (event) =>
+      reject((event.target as IDBRequest | null)?.error ?? transaction.error ?? new Error('本地音乐保存失败'));
     transaction.onabort = () => reject(transaction.error ?? new Error('本地音乐保存失败'));
   });
 }
@@ -91,7 +111,7 @@ function readRequest<T>(request: IDBRequest<T>) {
 
 export async function localAudioRecords(): Promise<LocalAudioRecord[]> {
   const db = await openDatabase();
-  const rows = await readRequest(db.transaction('records').objectStore('records').getAll()) as StoredAudio[];
+  const rows = (await readRequest(db.transaction('records').objectStore('records').getAll())) as StoredAudio[];
   return rows.sort((a, b) => b.importedAt.localeCompare(a.importedAt));
 }
 
@@ -105,18 +125,22 @@ async function refreshRecords() {
     if (version !== refreshVersion) return;
     snapshot = { ...snapshot, loading: false, error: message(error, '无法读取本地音乐') };
   }
-  recordListeners.forEach(listener => listener());
+  recordListeners.forEach((listener) => listener());
 }
 
 function initialize() {
   if (started) return;
   started = true;
-  window.addEventListener(AUDIO_CHANGE, () => { void refreshRecords(); });
+  window.addEventListener(AUDIO_CHANGE, () => {
+    void refreshRecords();
+  });
   if ('BroadcastChannel' in globalThis) {
     try {
       channel = new BroadcastChannel('husic-local-audio');
       channel.onmessage = () => window.dispatchEvent(new Event(AUDIO_CHANGE));
-    } catch { /* A single-window library still works when channels are unavailable. */ }
+    } catch {
+      /* A single-window library still works when channels are unavailable. */
+    }
   }
   void refreshRecords();
 }
@@ -126,28 +150,34 @@ async function changed() {
   // either of the local-library pages has ever mounted.
   initialize();
   window.dispatchEvent(new Event(AUDIO_CHANGE));
-  try { channel?.postMessage('changed'); } catch { /* Local subscribers already received the update. */ }
+  try {
+    channel?.postMessage('changed');
+  } catch {
+    /* Local subscribers already received the update. */
+  }
 }
 
 const subscribeRecords = (listener: () => void) => {
   recordListeners.add(listener);
-  return () => { recordListeners.delete(listener); };
+  return () => {
+    recordListeners.delete(listener);
+  };
 };
 const getSnapshot = () => snapshot;
 
 export function useLocalAudio(origin?: 'import' | 'download') {
   useEffect(initialize, []);
   const state = useSyncExternalStore(subscribeRecords, getSnapshot, getSnapshot);
-  return { ...state, records: origin ? state.records.filter(record => record.origin === origin) : state.records };
+  return { ...state, records: origin ? state.records.filter((record) => record.origin === origin) : state.records };
 }
 
 export function localAudioID(item: Item): string | undefined {
-  return item.copies.find(copy => copy.source === 'local')?.id;
+  return item.copies.find((copy) => copy.source === 'local')?.id;
 }
 
 async function audioBlob(id: string) {
   const db = await openDatabase();
-  const row = await readRequest(db.transaction('blobs').objectStore('blobs').get(id)) as { id: string; blob: Blob } | undefined;
+  const row = (await readRequest(db.transaction('blobs').objectStore('blobs').get(id))) as { id: string; blob: Blob } | undefined;
   if (!row?.blob) throw new Error('这首歌的本地副本已移除，请重新导入或下载');
   return row.blob;
 }
@@ -159,8 +189,17 @@ export async function localAudioStream(item: Item): Promise<Stream> {
   // leave the player believing a deleted copy is still in the library.
   const blob = await audioBlob(id);
   let url = blobURLs.get(id);
-  if (!url) { url = URL.createObjectURL(blob); blobURLs.set(id, url); }
-  return { url, source: 'local', id, bitrate: item.duration > 0 ? Math.round(blob.size * 8 / item.duration) : 0, format: item.copies.find(copy => copy.source === 'local')?.extra?.format ?? 'audio' };
+  if (!url) {
+    url = URL.createObjectURL(blob);
+    blobURLs.set(id, url);
+  }
+  return {
+    url,
+    source: 'local',
+    id,
+    bitrate: item.duration > 0 ? Math.round((blob.size * 8) / item.duration) : 0,
+    format: item.copies.find((copy) => copy.source === 'local')?.extra?.format ?? 'audio',
+  };
 }
 
 async function updateRecord(id: string, update: (record: StoredAudio) => StoredAudio) {
@@ -178,12 +217,12 @@ async function updateRecord(id: string, update: (record: StoredAudio) => StoredA
 }
 
 export async function setLocalAudioLiked(id: string, liked: boolean): Promise<void> {
-  await updateRecord(id, record => ({ ...record, liked, item: { ...record.item, liked } }));
+  await updateRecord(id, (record) => ({ ...record, liked, item: { ...record.item, liked } }));
 }
 
 export async function recordLocalAudioPlay(id: string): Promise<void> {
   const playedAt = new Date().toISOString();
-  await updateRecord(id, record => ({ ...record, playedAt, item: { ...record.item, playedAt } }));
+  await updateRecord(id, (record) => ({ ...record, playedAt, item: { ...record.item, playedAt } }));
 }
 
 export async function removeLocalAudio(id: string): Promise<void> {
@@ -210,7 +249,7 @@ function safeFileName(name: string) {
 
 export async function exportLocalAudio(id: string): Promise<void> {
   const db = await openDatabase();
-  const record = await readRequest(db.transaction('records').objectStore('records').get(id)) as StoredAudio | undefined;
+  const record = (await readRequest(db.transaction('records').objectStore('records').get(id))) as StoredAudio | undefined;
   if (!record) throw new Error('这首歌的本地副本已移除');
   const blob = await audioBlob(id);
   const url = URL.createObjectURL(blob);
@@ -228,11 +267,16 @@ export async function exportLocalAudio(id: string): Promise<void> {
 async function fingerprint(blob: Blob) {
   if (!crypto.subtle) throw new Error('请通过 HTTPS 或本机地址打开 Husic 后导入音乐');
   const digest = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
-  return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 type AudioTags = { title?: string; artists?: string[]; album?: string };
-function cleanTag(text: string) { return text.replace(/\u0000/g, '').trim().slice(0, 500); }
+function cleanTag(text: string) {
+  return text
+    .replace(/\u0000/g, '')
+    .trim()
+    .slice(0, 500);
+}
 function tagText(bytes: Uint8Array) {
   if (!bytes.length) return '';
   const encoding = bytes[0];
@@ -266,11 +310,15 @@ async function readTags(blob: Blob): Promise<AudioTags> {
         const name = ascii(offset, version === 2 ? 3 : 4);
         if (!/^[A-Z0-9]+$/.test(name)) break;
         const header = version === 2 ? 6 : 10;
-        const length = version === 2 ? (bytes[offset + 3] << 16) | (bytes[offset + 4] << 8) | bytes[offset + 5]
-          : version === 4 ? (bytes[offset + 4] << 21) | (bytes[offset + 5] << 14) | (bytes[offset + 6] << 7) | bytes[offset + 7]
-            : view.getUint32(offset + 4);
+        const length =
+          version === 2
+            ? (bytes[offset + 3] << 16) | (bytes[offset + 4] << 8) | bytes[offset + 5]
+            : version === 4
+              ? (bytes[offset + 4] << 21) | (bytes[offset + 5] << 14) | (bytes[offset + 6] << 7) | bytes[offset + 7]
+              : view.getUint32(offset + 4);
         if (length <= 0 || offset + header + length > bytes.length) break;
-        if (['TIT2', 'TT2', 'TPE1', 'TP1', 'TALB', 'TAL'].includes(name)) apply(name, tagText(bytes.subarray(offset + header, offset + header + length)));
+        if (['TIT2', 'TT2', 'TPE1', 'TP1', 'TALB', 'TAL'].includes(name))
+          apply(name, tagText(bytes.subarray(offset + header, offset + header + length)));
         offset += header + length;
       }
     }
@@ -284,11 +332,14 @@ async function readTags(blob: Blob): Promise<AudioTags> {
       if (end > bytes.length) break;
       if (kind === 4 && length >= 8) {
         let p = offset + 4;
-        const vendorLength = view.getUint32(p, true); p += 4 + vendorLength;
+        const vendorLength = view.getUint32(p, true);
+        p += 4 + vendorLength;
         if (p + 4 > end) break;
-        const count = Math.min(view.getUint32(p, true), 1000); p += 4;
+        const count = Math.min(view.getUint32(p, true), 1000);
+        p += 4;
         for (let i = 0; i < count && p + 4 <= end; i++) {
-          const size = view.getUint32(p, true); p += 4;
+          const size = view.getUint32(p, true);
+          p += 4;
           if (p + size > end) break;
           const text = new TextDecoder().decode(bytes.subarray(p, p + size));
           const equal = text.indexOf('=');
@@ -360,13 +411,21 @@ async function saveAudio(record: StoredAudio, blob: Blob, signal?: AbortSignal) 
   if (signal?.aborted) throw new Error('已取消下载');
   const transaction = db.transaction(['records', 'blobs'], 'readwrite');
   const complete = transactionComplete(transaction);
-  const cancel = () => { try { transaction.abort(); } catch { /* The atomic commit already finished. */ } };
+  const cancel = () => {
+    try {
+      transaction.abort();
+    } catch {
+      /* The atomic commit already finished. */
+    }
+  };
   signal?.addEventListener('abort', cancel, { once: true });
   try {
     transaction.objectStore('records').add(record);
     transaction.objectStore('blobs').add({ id: record.id, blob });
     await complete;
-  } finally { signal?.removeEventListener('abort', cancel); }
+  } finally {
+    signal?.removeEventListener('abort', cancel);
+  }
   // This is best effort: denial is not a reason to claim the import failed.
   void navigator.storage?.persist?.().catch(() => false);
   await changed();
@@ -375,15 +434,25 @@ async function saveAudio(record: StoredAudio, blob: Blob, signal?: AbortSignal) 
 function localItem(id: string, format: string, details: Omit<Item, 'copies' | 'songId'>): Item {
   return {
     ...details,
-    copies: [{ source: 'local', id, title: details.title, artists: details.artists, album: details.album,
-      duration: details.duration, cover: details.cover, extra: { format } }],
+    copies: [
+      {
+        source: 'local',
+        id,
+        title: details.title,
+        artists: details.artists,
+        album: details.album,
+        duration: details.duration,
+        cover: details.cover,
+        extra: { format },
+      },
+    ],
   };
 }
 
 /** Never uploads imported audio or keeps references to the original file path. */
 export async function importLocalAudio(files: File[]): Promise<{ added: number; duplicates: number; failed: string[] }> {
   const result = { added: 0, duplicates: 0, failed: [] as string[] };
-  const existing = new Set((await localAudioRecords()).map(record => record.id));
+  const existing = new Set((await localAudioRecords()).map((record) => record.id));
   for (const file of files) {
     try {
       const format = file.name.split('.').pop()?.toLowerCase() ?? '';
@@ -391,53 +460,90 @@ export async function importLocalAudio(files: File[]): Promise<{ added: number; 
       if (!file.size) throw new Error('文件是空的');
       if (file.size > MAX_AUDIO_BYTES) throw new Error('文件超过 512 MB');
       const id = `import:${await fingerprint(file)}`;
-      if (existing.has(id)) { result.duplicates++; continue; }
+      if (existing.has(id)) {
+        result.duplicates++;
+        continue;
+      }
       const blob = file.type.startsWith('audio/') ? file : new Blob([file], { type: AUDIO_TYPES[format] });
       const duration = await probeAudio(blob);
-      const tags = await readTags(blob).catch(() => ({} as AudioTags));
-      const item = localItem(id, format, { title: tags.title || file.name.replace(/\.[^.]+$/, ''), artists: tags.artists || [],
-        album: tags.album || '', duration, cover: '', liked: false });
-      const record: StoredAudio = { id, origin: 'import', item, format, fileName: safeFileName(file.name), size: file.size,
-        importedAt: new Date().toISOString(), liked: false };
-      try { await saveAudio(record, blob); }
-      catch (error) {
-        if (error instanceof DOMException && error.name === 'ConstraintError') { result.duplicates++; existing.add(id); continue; }
+      const tags = await readTags(blob).catch(() => ({}) as AudioTags);
+      const item = localItem(id, format, {
+        title: tags.title || file.name.replace(/\.[^.]+$/, ''),
+        artists: tags.artists || [],
+        album: tags.album || '',
+        duration,
+        cover: '',
+        liked: false,
+      });
+      const record: StoredAudio = {
+        id,
+        origin: 'import',
+        item,
+        format,
+        fileName: safeFileName(file.name),
+        size: file.size,
+        importedAt: new Date().toISOString(),
+        liked: false,
+      };
+      try {
+        await saveAudio(record, blob);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'ConstraintError') {
+          result.duplicates++;
+          existing.add(id);
+          continue;
+        }
         throw error;
       }
       existing.add(id);
       result.added++;
-    } catch (error) { result.failed.push(`${file.name}：${message(error)}`); }
+    } catch (error) {
+      result.failed.push(`${file.name}：${message(error)}`);
+    }
   }
   return result;
 }
 
 const subscribeDownloads = (listener: () => void) => {
   downloadListeners.add(listener);
-  return () => { downloadListeners.delete(listener); };
+  return () => {
+    downloadListeners.delete(listener);
+  };
 };
 const getDownloads = () => downloads;
 
-export function useAudioDownloads() { return useSyncExternalStore(subscribeDownloads, getDownloads, getDownloads); }
+export function useAudioDownloads() {
+  return useSyncExternalStore(subscribeDownloads, getDownloads, getDownloads);
+}
 
 function updateDownload(id: string, changes: Partial<AudioDownload>) {
-  downloads = downloads.map(task => task.id === id ? { ...task, ...changes } : task);
-  downloadListeners.forEach(listener => listener());
+  downloads = downloads.map((task) => (task.id === id ? { ...task, ...changes } : task));
+  downloadListeners.forEach((listener) => listener());
 }
 
 export function dismissAudioDownload(id: string) {
   if (downloadControllers.has(id)) return;
-  downloads = downloads.filter(task => task.id !== id);
-  downloadListeners.forEach(listener => listener());
+  downloads = downloads.filter((task) => task.id !== id);
+  downloadListeners.forEach((listener) => listener());
 }
 
-export function cancelAudioDownload(id: string) { downloadControllers.get(id)?.abort(); }
+export function cancelAudioDownload(id: string) {
+  downloadControllers.get(id)?.abort();
+}
 
 export function downloadKey(item: Item) {
   if (item.songId) return `song:${item.songId}`;
-  return item.copies.map(copy => `${copy.source}:${copy.id}`).sort().join('|') || `${item.title}:${item.artists.join('/')}:${item.duration}`;
+  return (
+    item.copies
+      .map((copy) => `${copy.source}:${copy.id}`)
+      .sort()
+      .join('|') || `${item.title}:${item.artists.join('/')}:${item.duration}`
+  );
 }
 
-export function isAudioDownloading(item: Item) { return downloadKeys.has(downloadKey(item)); }
+export function isAudioDownloading(item: Item) {
+  return downloadKeys.has(downloadKey(item));
+}
 
 // Recommendations extend Item with display-only fields. The download API
 // deliberately rejects unknown JSON properties, so send its public contract.
@@ -451,7 +557,7 @@ function downloadableItem(item: Item): Item {
     cover: item.cover,
     liked: item.liked,
     playedAt: item.playedAt,
-    copies: item.copies.map(copy => ({
+    copies: item.copies.map((copy) => ({
       source: copy.source,
       id: copy.id,
       title: copy.title,
@@ -468,9 +574,21 @@ function responseFormat(response: Response) {
   const header = response.headers.get('X-Husic-Audio-Format')?.toLowerCase().replace(/^\./, '') ?? '';
   if (AUDIO_TYPES[header]) return header;
   const mime = response.headers.get('Content-Type')?.toLowerCase().split(';')[0].trim() ?? '';
-  const byMime: Record<string, string> = { 'audio/mpeg': 'mp3', 'audio/mp3': 'mp3', 'audio/wav': 'wav', 'audio/x-wav': 'wav',
-    'audio/flac': 'flac', 'audio/x-flac': 'flac', 'audio/aac': 'aac', 'audio/aacp': 'aac', 'audio/mp4': 'm4a',
-    'audio/x-m4a': 'm4a', 'audio/ogg': 'ogg', 'application/ogg': 'ogg', 'audio/webm': 'webm' };
+  const byMime: Record<string, string> = {
+    'audio/mpeg': 'mp3',
+    'audio/mp3': 'mp3',
+    'audio/wav': 'wav',
+    'audio/x-wav': 'wav',
+    'audio/flac': 'flac',
+    'audio/x-flac': 'flac',
+    'audio/aac': 'aac',
+    'audio/aacp': 'aac',
+    'audio/mp4': 'm4a',
+    'audio/x-m4a': 'm4a',
+    'audio/ogg': 'ogg',
+    'application/ogg': 'ogg',
+    'audio/webm': 'webm',
+  };
   const format = byMime[mime];
   if (!format) throw new Error('服务器没有返回可保存的音频');
   return format;
@@ -488,16 +606,21 @@ export async function downloadAudio(item: Item, signal?: AbortSignal): Promise<v
   signal?.addEventListener('abort', cancel, { once: true });
   downloadControllers.set(id, controller);
   downloads = [{ id, item, state: 'downloading', received: 0, total: 0, error: '' }, ...downloads];
-  downloadListeners.forEach(listener => listener());
+  downloadListeners.forEach((listener) => listener());
   try {
     const db = await openDatabase();
-    const records = await readRequest(db.transaction('records').objectStore('records').getAll()) as StoredAudio[];
-    if (records.some(record => record.origin === 'download' && record.downloadKey === key)) throw new Error('这首歌已经在下载管理中');
+    const records = (await readRequest(db.transaction('records').objectStore('records').getAll())) as StoredAudio[];
+    if (records.some((record) => record.origin === 'download' && record.downloadKey === key)) throw new Error('这首歌已经在下载管理中');
     if (controller.signal.aborted) throw new Error('已取消下载');
-    const response = await fetch('/api/download', { method: 'POST', credentials: 'same-origin', signal: controller.signal,
-      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ item: downloadableItem(item) }) });
+    const response = await fetch('/api/download', {
+      method: 'POST',
+      credentials: 'same-origin',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item: downloadableItem(item) }),
+    });
     if (!response.ok) {
-      const body = await response.json().catch(() => ({})) as { error?: string };
+      const body = (await response.json().catch(() => ({}))) as { error?: string };
       throw new Error(body.error || (response.status === 401 ? '登录已过期，请重新连接后下载' : '这首歌暂时无法下载'));
     }
     const format = responseFormat(response);
@@ -516,11 +639,19 @@ export async function downloadAudio(item: Item, signal?: AbortSignal): Promise<v
         const part = await reader.read();
         if (part.done) break;
         received += part.value.byteLength;
-        if (received > MAX_AUDIO_BYTES) { await reader.cancel(); throw new Error('这份音频超过 512 MB，下载已停止'); }
+        if (received > MAX_AUDIO_BYTES) {
+          await reader.cancel();
+          throw new Error('这份音频超过 512 MB，下载已停止');
+        }
         chunks.push(new Uint8Array(part.value));
-        if (performance.now() - lastUpdate > 120) { updateDownload(id, { received }); lastUpdate = performance.now(); }
+        if (performance.now() - lastUpdate > 120) {
+          updateDownload(id, { received });
+          lastUpdate = performance.now();
+        }
       }
-    } finally { reader.releaseLock(); }
+    } finally {
+      reader.releaseLock();
+    }
     if (!received) throw new Error('没有收到音频内容');
     if (total && received !== total) throw new Error('音频没有下载完整，请重试');
     if (controller.signal.aborted) throw new Error('已取消下载');
@@ -529,14 +660,33 @@ export async function downloadAudio(item: Item, signal?: AbortSignal): Promise<v
     const duration = await probeAudio(blob, controller.signal);
     const recordID = `download:${await fingerprint(blob)}`;
     if (controller.signal.aborted) throw new Error('已取消下载');
-    if (records.some(record => record.id === recordID)) throw new Error('这份音频已经在下载管理中');
-    const recordItem = localItem(recordID, format, { title: item.title, artists: item.artists, album: item.album,
-      cover: item.cover, duration, liked: item.liked });
+    if (records.some((record) => record.id === recordID)) throw new Error('这份音频已经在下载管理中');
+    const recordItem = localItem(recordID, format, {
+      title: item.title,
+      artists: item.artists,
+      album: item.album,
+      cover: item.cover,
+      duration,
+      liked: item.liked,
+    });
     const fileName = safeFileName(`${item.artists.length ? `${item.artists.join(', ')} - ` : ''}${item.title}.${format}`);
-    await saveAudio({ id: recordID, origin: 'download', item: recordItem, fileName, format, size: blob.size,
-      importedAt: new Date().toISOString(), liked: item.liked, downloadKey: key }, blob, controller.signal);
-    downloads = downloads.filter(task => task.id !== id);
-    downloadListeners.forEach(listener => listener());
+    await saveAudio(
+      {
+        id: recordID,
+        origin: 'download',
+        item: recordItem,
+        fileName,
+        format,
+        size: blob.size,
+        importedAt: new Date().toISOString(),
+        liked: item.liked,
+        downloadKey: key,
+      },
+      blob,
+      controller.signal,
+    );
+    downloads = downloads.filter((task) => task.id !== id);
+    downloadListeners.forEach((listener) => listener());
   } catch (error) {
     const cancelled = controller.signal.aborted;
     // Also release a response body when its headers, size or decoding failed.

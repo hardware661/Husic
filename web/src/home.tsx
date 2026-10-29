@@ -17,15 +17,25 @@ export function Home() {
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     const hit = recall<HomeData>('home:multi');
-    if (hit && homeVersion === version && Date.now() - hit.at < 60_000) { setData(hit.value); return; }
+    if (hit && homeVersion === version && Date.now() - hit.at < 60_000) {
+      setData(hit.value);
+      return;
+    }
     let alive = true;
     if (!homeRequest || homeRequest.version !== version) {
       const request = api.home().then((data) => {
-        if (homeRequest?.promise === request) { remember('home:multi', data); homeVersion = version; }
+        if (homeRequest?.promise === request) {
+          remember('home:multi', data);
+          homeVersion = version;
+        }
         return data;
       });
       homeRequest = { version, promise: request };
-      void request.finally(() => { if (homeRequest?.promise === request) homeRequest = null; }).catch(() => {});
+      void request
+        .finally(() => {
+          if (homeRequest?.promise === request) homeRequest = null;
+        })
+        .catch(() => {});
     }
     homeRequest.promise
       .then((d) => {
@@ -61,7 +71,11 @@ export function Home() {
       )}
       {playlists.length > 0 && (
         <Section title="我的歌单" to="/library">
-          <div className="shelf">{playlists.slice(0, 6).map((p) => <ShelfItem key={p.id} playlist={p} />)}</div>
+          <div className="shelf">
+            {playlists.slice(0, 6).map((p) => (
+              <ShelfItem key={p.id} playlist={p} />
+            ))}
+          </div>
         </Section>
       )}
       {recent.length > 0 && (
@@ -148,15 +162,26 @@ function Crate({ data }: { data: HomeData }) {
     <section className="crate">
       <div className="crate-row">
         {sleeves.map((v) => (
-          <button key={v.key} className={`sleeve crate-entry-${v.key.startsWith('p') ? 'playlist' : v.key}${v.live ? ' is-live' : ''}`} onClick={v.onPlay}>
+          <button
+            key={v.key}
+            className={`sleeve crate-entry-${v.key.startsWith('p') ? 'playlist' : v.key}${v.live ? ' is-live' : ''}`}
+            onClick={v.onPlay}
+          >
             <span className="sleeve-stage">
               <span className="sleeve-disc" aria-hidden="true">
                 {v.disc && <img src={sized(v.disc, 120)} alt="" loading="lazy" decoding="async" />}
               </span>
               <span className="sleeve-art">{v.art}</span>
             </span>
-            <span className="sleeve-copy"><strong>{v.title}</strong>{v.note && <small>{v.note}</small>}</span>
-            {['daily', 'fm'].includes(v.key) && <span className="sleeve-play" aria-hidden="true"><Icon name="play" size={15} /></span>}
+            <span className="sleeve-copy">
+              <strong>{v.title}</strong>
+              {v.note && <small>{v.note}</small>}
+            </span>
+            {['daily', 'fm'].includes(v.key) && (
+              <span className="sleeve-play" aria-hidden="true">
+                <Icon name="play" size={15} />
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -330,7 +355,10 @@ export function CoverFlow({ cards }: { cards: Card[] }) {
           const dx = Math.abs(e.clientX - gesture.x);
           const dy = Math.abs(e.clientY - gesture.y);
           if (!gesture.horizontal) {
-            if (dy > 10 && dy >= dx) { swipe.current = null; return; }
+            if (dy > 10 && dy >= dx) {
+              swipe.current = null;
+              return;
+            }
             if (dx < 12 || dx <= dy * 1.2) return;
             gesture.horizontal = true;
             e.currentTarget.setPointerCapture(e.pointerId);
@@ -339,7 +367,9 @@ export function CoverFlow({ cards }: { cards: Card[] }) {
         }}
         onPointerUp={(e) => finishSwipe(e)}
         onPointerCancel={(e) => finishSwipe(e, true)}
-        onLostPointerCapture={(e) => { if (e.target === e.currentTarget) finishSwipe(e, true); }}
+        onLostPointerCapture={(e) => {
+          if (e.target === e.currentTarget) finishSwipe(e, true);
+        }}
         onClickCapture={(e) => {
           if (e.detail !== 0 && Date.now() < suppressClickUntil.current) {
             e.preventDefault();

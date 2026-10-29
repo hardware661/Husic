@@ -10,7 +10,14 @@ import { usePageVisible } from './view-activity';
 // card, two and three a smaller pair beside it; the rest are a numbered list.
 
 const platforms = ['netease', 'qq', 'kuwo', 'kugou'];
-const notes: Record<string, string> = { 热歌: '此刻最热', 新歌: '新鲜上榜', 飙升: '热度上升', 原创: '原创声音', 流行指数: '流行风向', TOP500: '人气精选' };
+const notes: Record<string, string> = {
+  热歌: '此刻最热',
+  新歌: '新鲜上榜',
+  飙升: '热度上升',
+  原创: '原创声音',
+  流行指数: '流行风向',
+  TOP500: '人气精选',
+};
 
 function tabKeys(e: KeyboardEvent<HTMLDivElement>) {
   if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
@@ -18,8 +25,10 @@ function tabKeys(e: KeyboardEvent<HTMLDivElement>) {
   const at = tabs.indexOf(e.target as HTMLButtonElement);
   if (at < 0) return;
   e.preventDefault();
-  const next = e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : (at + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
-  tabs[next].focus(); tabs[next].click();
+  const next =
+    e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : (at + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+  tabs[next].focus();
+  tabs[next].click();
 }
 
 export function Charts() {
@@ -32,8 +41,12 @@ export function Charts() {
   const editions = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let alive = true;
-    loadCharts().then((r) => alive && setCharts(r)).catch(() => alive && setErrorKey('catalog'));
-    return () => { alive = false; };
+    loadCharts()
+      .then((r) => alive && setCharts(r))
+      .catch(() => alive && setErrorKey('catalog'));
+    return () => {
+      alive = false;
+    };
   }, [retry]);
   const wanted = query(path, 'c');
   const selected = useMemo(() => charts.find((c) => `${c.source}:${c.id}` === wanted) ?? charts[0], [charts, wanted]);
@@ -53,10 +66,13 @@ export function Charts() {
   }, [selected, key, retry]);
   const ready = Boolean(data);
   useEffect(() => {
-    if (!ready || !pageVisible || !charts.length || !matchMedia('(min-width: 761px) and (hover: hover) and (pointer: fine)').matches) return;
+    if (!ready || !pageVisible || !charts.length || !matchMedia('(min-width: 761px) and (hover: hover) and (pointer: fine)').matches)
+      return;
     let active = true;
     void warmRankings(charts, () => active);
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [ready, pageVisible, charts]);
   const choose = (c: Chart) => navigate(`/charts?c=${c.source}:${c.id}`, true);
   const ofPlatform = charts.filter((c) => c.source === selected?.source);
@@ -73,51 +89,111 @@ export function Charts() {
       node.dataset.ready = 'true';
     };
     position();
-    const observer = new ResizeObserver(position); observer.observe(node);
+    const observer = new ResizeObserver(position);
+    observer.observe(node);
     return () => observer.disconnect();
   }, [key, charts]);
   return (
     <div className="page charts-page">
       <PageHeader title="排行榜" />
       <div className="chart-switcher">
-      <div className="chart-platforms" role="tablist" aria-label="平台" onKeyDown={tabKeys}>
-        {platforms.map((p) => (
-          <button
-            key={p}
-            role="tab"
-            aria-selected={selected?.source === p}
-            aria-controls="ranking-panel"
-            tabIndex={selected?.source === p ? 0 : -1}
-            className={selected?.source === p ? 'is-on' : ''}
-            onClick={() => {
-              const first = charts.find((c) => c.source === p && c.short === selected?.short) ?? charts.find((c) => c.source === p);
-              if (first) choose(first);
-            }}
-            onPointerEnter={(event) => { const first = charts.find((c) => c.source === p); if (event.pointerType === 'mouse' && first) void loadRanking(first).catch(() => {}); }}
-            onFocus={(event) => { const first = charts.find((c) => c.source === p); if (event.currentTarget.matches(':focus-visible') && first) void loadRanking(first).catch(() => {}); }}
-          >
-            {sourceNames[p]}
-          </button>
-        ))}
+        <div className="chart-platforms" role="tablist" aria-label="平台" onKeyDown={tabKeys}>
+          {platforms.map((p) => (
+            <button
+              key={p}
+              role="tab"
+              aria-selected={selected?.source === p}
+              aria-controls="ranking-panel"
+              tabIndex={selected?.source === p ? 0 : -1}
+              className={selected?.source === p ? 'is-on' : ''}
+              onClick={() => {
+                const first = charts.find((c) => c.source === p && c.short === selected?.short) ?? charts.find((c) => c.source === p);
+                if (first) choose(first);
+              }}
+              onPointerEnter={(event) => {
+                const first = charts.find((c) => c.source === p);
+                if (event.pointerType === 'mouse' && first) void loadRanking(first).catch(() => {});
+              }}
+              onFocus={(event) => {
+                const first = charts.find((c) => c.source === p);
+                if (event.currentTarget.matches(':focus-visible') && first) void loadRanking(first).catch(() => {});
+              }}
+            >
+              {sourceNames[p]}
+            </button>
+          ))}
+        </div>
+        <div
+          className="chart-editions"
+          ref={editions}
+          role="tablist"
+          aria-label="榜单"
+          onKeyDown={(event) => {
+            event.currentTarget.dataset.keyboard = 'true';
+            tabKeys(event);
+          }}
+          onPointerDown={(event) => {
+            event.currentTarget.dataset.keyboard = 'false';
+          }}
+        >
+          <span className="chart-edition-indicator" aria-hidden="true" />
+          {ofPlatform.map((c, i) => (
+            <button
+              key={c.id}
+              id={`chart-tab-${c.source}-${c.id}`}
+              role="tab"
+              aria-label={c.short}
+              aria-controls="ranking-panel"
+              aria-selected={c === selected}
+              tabIndex={c === selected ? 0 : -1}
+              className={c === selected ? 'is-on' : ''}
+              onClick={() => choose(c)}
+              onPointerEnter={(event) => {
+                if (event.pointerType === 'mouse') void loadRanking(c).catch(() => {});
+              }}
+              onFocus={(event) => {
+                if (event.currentTarget.matches(':focus-visible')) void loadRanking(c).catch(() => {});
+              }}
+            >
+              <span className="edition-number" aria-hidden="true">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <span>
+                <strong>{c.short}</strong>
+                <small>{notes[c.short] ?? '发现好歌'}</small>
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
-      <div className="chart-editions" ref={editions} role="tablist" aria-label="榜单" onKeyDown={(event) => { event.currentTarget.dataset.keyboard = 'true'; tabKeys(event); }} onPointerDown={(event) => { event.currentTarget.dataset.keyboard = 'false'; }}>
-        <span className="chart-edition-indicator" aria-hidden="true" />
-        {ofPlatform.map((c, i) => (
-          <button key={c.id} id={`chart-tab-${c.source}-${c.id}`} role="tab" aria-label={c.short} aria-controls="ranking-panel" aria-selected={c === selected} tabIndex={c === selected ? 0 : -1} className={c === selected ? 'is-on' : ''} onClick={() => choose(c)} onPointerEnter={(event) => { if (event.pointerType === 'mouse') void loadRanking(c).catch(() => {}); }} onFocus={(event) => { if (event.currentTarget.matches(':focus-visible')) void loadRanking(c).catch(() => {}); }}>
-            <span className="edition-number" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
-            <span><strong>{c.short}</strong><small>{notes[c.short] ?? '发现好歌'}</small></span>
-          </button>
-        ))}
-      </div>
-      </div>
-      <div id="ranking-panel" role="tabpanel" aria-labelledby={selected ? `chart-tab-${selected.source}-${selected.id}` : undefined} aria-busy={!data && !failed}>
-      {failed && <Empty title="这个榜单暂时拿不到" hint="换一个榜单，或者稍后再试。"><button className="pill" onClick={() => setRetry((n) => n + 1)}>重新试试</button></Empty>}
-      {!failed && !data && <div className="chart-skeleton" aria-label="正在加载榜单"><div className="sk-chart-head" /><div className="sk-chart-podium"><i /><i /><i /></div></div>}
-      {data && (
-        <Ranking chart={data.chart} songs={data.songs}>
-          <Rail charts={ofPlatform.filter((c) => c !== selected)} onPick={choose} />
-        </Ranking>
-      )}
+      <div
+        id="ranking-panel"
+        role="tabpanel"
+        aria-labelledby={selected ? `chart-tab-${selected.source}-${selected.id}` : undefined}
+        aria-busy={!data && !failed}
+      >
+        {failed && (
+          <Empty title="这个榜单暂时拿不到" hint="换一个榜单，或者稍后再试。">
+            <button className="pill" onClick={() => setRetry((n) => n + 1)}>
+              重新试试
+            </button>
+          </Empty>
+        )}
+        {!failed && !data && (
+          <div className="chart-skeleton" aria-label="正在加载榜单">
+            <div className="sk-chart-head" />
+            <div className="sk-chart-podium">
+              <i />
+              <i />
+              <i />
+            </div>
+          </div>
+        )}
+        {data && (
+          <Ranking chart={data.chart} songs={data.songs}>
+            <Rail charts={ofPlatform.filter((c) => c !== selected)} onPick={choose} />
+          </Ranking>
+        )}
       </div>
     </div>
   );
@@ -200,35 +276,35 @@ function Ranking({ chart, songs, children }: { chart: Chart; songs: Item[]; chil
         ))}
       </div>
       <div className="chart-layout">
-      <ol className="rank-list">
-        {songs.slice(3).map((item, k) => {
-          const i = k + 3;
-          const active = current !== null && sameItem(current, item);
-          return (
-            <li
-              key={`${i}-${item.copies[0]?.id}`}
-              className={active ? 'is-current' : ''}
-              onClick={() => play(songs, i)}
-              tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && play(songs, i)}
-            >
-              <span className={`rank-number${i < 10 ? ' is-top' : ''}`}>{active && playing ? <Bars /> : i + 1}</span>
-              <Cover src={item.cover} size={44} />
-              <span className="song-text">
-                <strong>{item.title}</strong>
-                <small>{artistLine(item)}</small>
-              </span>
-              <span className="song-album">{item.album}</span>
-              <span className="song-actions">
-                <Heart item={item} />
-                <span className="song-time">{clock(item.duration)}</span>
-                <SongMenu item={item} />
-              </span>
-            </li>
-          );
-        })}
-      </ol>
-      {children}
+        <ol className="rank-list">
+          {songs.slice(3).map((item, k) => {
+            const i = k + 3;
+            const active = current !== null && sameItem(current, item);
+            return (
+              <li
+                key={`${i}-${item.copies[0]?.id}`}
+                className={active ? 'is-current' : ''}
+                onClick={() => play(songs, i)}
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && play(songs, i)}
+              >
+                <span className={`rank-number${i < 10 ? ' is-top' : ''}`}>{active && playing ? <Bars /> : i + 1}</span>
+                <Cover src={item.cover} size={44} />
+                <span className="song-text">
+                  <strong>{item.title}</strong>
+                  <small>{artistLine(item)}</small>
+                </span>
+                <span className="song-album">{item.album}</span>
+                <span className="song-actions">
+                  <Heart item={item} />
+                  <span className="song-time">{clock(item.duration)}</span>
+                  <SongMenu item={item} />
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+        {children}
       </div>
     </>
   );

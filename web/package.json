@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5190 --strictPort",
     "build": "python3 ../connect/build.py --keep && tsc -b && vite build",
-    "check": "tsc -b",
-    "test": "node --experimental-strip-types --test unit/*.test.ts"
+    "check": "tsc -b && prettier --check src unit",
+    "test": "node --experimental-strip-types --test unit/*.test.ts",
+    "format": "prettier --write src unit"
   },
   "dependencies": {
     "react": "^19.0.0",
@@ -16,6 +17,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "prettier": "3.9.10",
     "typescript": "^5.8.0",
     "vite": "^7.0.0"
   },

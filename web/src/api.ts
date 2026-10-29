@@ -56,7 +56,15 @@ export type Discover = {
   similar: { seed: Item; songs: Pick[] } | null;
 };
 
-export type Home = { daily: Item[]; recommendations?: Item[]; picks: Card[]; recent: Item[]; playlists: Playlist[]; fm: Item[]; liked: Item[] };
+export type Home = {
+  daily: Item[];
+  recommendations?: Item[];
+  picks: Card[];
+  recent: Item[];
+  playlists: Playlist[];
+  fm: Item[];
+  liked: Item[];
+};
 
 /** Last answers of slow pages, kept in memory and in localStorage, so a page
  * can draw at once and refresh behind the scenes. */
@@ -99,7 +107,10 @@ export type LyricLine = { t: number; text: string; tr?: string; words?: Word[] }
 export type Lyrics = { lines: LyricLine[]; credits?: string[]; synced: boolean };
 
 export class ApiError extends Error {
-  constructor(readonly status: number, message: string) {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
     super(message);
   }
 }
@@ -131,10 +142,13 @@ export const api = {
   startNetEase: () => call<ConnectionAttempt>('POST', '/api/accounts/netease/login', {}),
   checkNetEase: (id: string) => call<ConnectionAttempt>('POST', `/api/accounts/netease/login/${encodeURIComponent(id)}/check`, {}),
   startConnection: (kind: QRKind) => call<ConnectionAttempt>('POST', `/api/accounts/${kind}/login`, {}),
-  checkConnection: (kind: QRKind, id: string) => call<ConnectionAttempt>('POST', `/api/accounts/${kind}/login/${encodeURIComponent(id)}/check`, {}),
+  checkConnection: (kind: QRKind, id: string) =>
+    call<ConnectionAttempt>('POST', `/api/accounts/${kind}/login/${encodeURIComponent(id)}/check`, {}),
   accountCollections: (kind: AccountPlatform) => call<{ collections: AccountCollection[] }>('GET', `/api/accounts/${kind}/collections`),
-  accountCollection: (kind: AccountPlatform, id: string, page = 1) => call<AccountCollectionPage>('GET', `/api/accounts/${kind}/collections/${encodeURIComponent(id)}?page=${page}`),
-  bilibiliVideo: (id: string) => call<{ video: { id: string; title: string; cover: string }; songs: Item[] }>('GET', `/api/bilibili/videos/${encodeURIComponent(id)}`),
+  accountCollection: (kind: AccountPlatform, id: string, page = 1) =>
+    call<AccountCollectionPage>('GET', `/api/accounts/${kind}/collections/${encodeURIComponent(id)}?page=${page}`),
+  bilibiliVideo: (id: string) =>
+    call<{ video: { id: string; title: string; cover: string }; songs: Item[] }>('GET', `/api/bilibili/videos/${encodeURIComponent(id)}`),
   startYouTube: () => call<ConnectionAttempt>('POST', '/api/accounts/youtube/login', {}),
   checkYouTube: () => call<{ ok: boolean; youtube: AccountStatus['youtube'] }>('POST', '/api/accounts/youtube/check', {}),
   cancelConnection: (id: string) => call<{ ok: boolean }>('DELETE', `/api/accounts/attempts/${encodeURIComponent(id)}`, {}),
@@ -164,13 +178,21 @@ export const api = {
 };
 
 export const sourceNames: Record<string, string> = {
-  netease: '网易云', qq: 'QQ 音乐', kuwo: '酷我', kugou: '酷狗', migu: '咪咕', youtube: 'YouTube', bilibili: 'B站',
+  netease: '网易云',
+  qq: 'QQ 音乐',
+  kuwo: '酷我',
+  kugou: '酷狗',
+  migu: '咪咕',
+  youtube: 'YouTube',
+  bilibili: 'B站',
 };
 
 export const refOf = (t: Track) => `${t.source}:${t.id}`;
 
 export function inspectionID(item: Item) {
-  return item.copies.length > 0 && item.copies.every((copy) => copy.source === 'bilibili' && copy.extra?.inspect === 'parts') ? item.copies[0].id : null;
+  return item.copies.length > 0 && item.copies.every((copy) => copy.source === 'bilibili' && copy.extra?.inspect === 'parts')
+    ? item.copies[0].id
+    : null;
 }
 
 export function artistLine(item: { artists: string[] }) {

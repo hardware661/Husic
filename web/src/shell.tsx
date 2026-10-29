@@ -30,16 +30,44 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
   const path = usePath();
   const { playlists } = useLibrary();
   return (
-    <aside className="sidebar" id="desktop-sidebar" onDragStart={event => event.preventDefault()} onContextMenu={event => event.preventDefault()}>
-      <button className="brand" type="button" onClick={onToggle} aria-expanded={!collapsed} aria-controls="sidebar-navigation" aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'} title={collapsed ? '展开侧边栏' : '收起侧边栏'}>
+    <aside
+      className="sidebar"
+      id="desktop-sidebar"
+      onDragStart={(event) => event.preventDefault()}
+      onContextMenu={(event) => event.preventDefault()}
+    >
+      <button
+        className="brand"
+        type="button"
+        onClick={onToggle}
+        aria-expanded={!collapsed}
+        aria-controls="sidebar-navigation"
+        aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'}
+        title={collapsed ? '展开侧边栏' : '收起侧边栏'}
+      >
         <img className="brand-mark" src="/brand/husic-icon.svg?v=0.2.0" width={28} height={28} alt="" />
         <strong>Husic</strong>
         <Icon name="chevron" size={12} className="brand-disclosure" />
       </button>
       <nav className="side-nav" id="sidebar-navigation" aria-label="主要导航">
-        <button className={`side-search-button${path.startsWith('/search')?' is-selected':''}`} type="button" aria-label="搜索音乐" data-label="搜索" onClick={openSearch}><Icon name="search" size={18}/><span className="side-nav-label">搜索</span></button>
+        <button
+          className={`side-search-button${path.startsWith('/search') ? ' is-selected' : ''}`}
+          type="button"
+          aria-label="搜索音乐"
+          data-label="搜索"
+          onClick={openSearch}
+        >
+          <Icon name="search" size={18} />
+          <span className="side-nav-label">搜索</span>
+        </button>
         {sections.map((s) => (
-          <Link key={s.to} to={s.to} label={s.label} className={isActive(path, s.to) ? 'is-selected' : ''} onIntent={s.to === '/charts' ? prepareChartEntry : undefined}>
+          <Link
+            key={s.to}
+            to={s.to}
+            label={s.label}
+            className={isActive(path, s.to) ? 'is-selected' : ''}
+            onIntent={s.to === '/charts' ? prepareChartEntry : undefined}
+          >
             <Icon name={s.icon} size={18} />
             <span className="side-nav-label">{s.label}</span>
           </Link>
@@ -67,7 +95,8 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
       </nav>
       <nav className="side-nav side-settings" aria-label="应用设置">
         <Link to="/settings" label="设置" className={isActive(path, '/settings') ? 'is-selected' : ''}>
-          <Icon name="settings" size={18} /><span className="side-nav-label">设置</span>
+          <Icon name="settings" size={18} />
+          <span className="side-nav-label">设置</span>
         </Link>
       </nav>
     </aside>
@@ -77,9 +106,19 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
 export function TabBar() {
   const path = usePath();
   return (
-    <nav className="tab-bar" aria-label="主要导航" onDragStart={event => event.preventDefault()} onContextMenu={event => event.preventDefault()}>
+    <nav
+      className="tab-bar"
+      aria-label="主要导航"
+      onDragStart={(event) => event.preventDefault()}
+      onContextMenu={(event) => event.preventDefault()}
+    >
       {tabs.map((s) => (
-        <Link key={s.to} to={s.to} className={isActive(path, s.to) ? 'is-selected' : ''} onIntent={s.to === '/charts' ? prepareChartEntry : undefined}>
+        <Link
+          key={s.to}
+          to={s.to}
+          className={isActive(path, s.to) ? 'is-selected' : ''}
+          onIntent={s.to === '/charts' ? prepareChartEntry : undefined}
+        >
           <Icon name={s.icon} size={23} />
           <span>{s.label}</span>
         </Link>
@@ -92,7 +131,7 @@ export function TabBar() {
 export function MiniPlayer({ onOpen, covered = false }: { onOpen: () => void; covered?: boolean }) {
   const { current: actual, presentation: current, playing, loading, toggle, next, previous } = usePlayer();
   if (!current) return null;
-  const active=playing||loading;
+  const active = playing || loading;
   return (
     <div className={`mini-player${loading ? ' is-loading' : ''}`} role="region" aria-label="正在播放">
       <div className="mini-transport">
@@ -116,7 +155,9 @@ export function MiniPlayer({ onOpen, covered = false }: { onOpen: () => void; co
       </button>
       <div className="mini-extra">
         {actual && <Heart item={actual} />}
-        {actual && <DownloadButton key={actual.songId ?? actual.copies.map(copy => `${copy.source}:${copy.id}`).join('|')} item={actual} />}
+        {actual && (
+          <DownloadButton key={actual.songId ?? actual.copies.map((copy) => `${copy.source}:${copy.id}`).join('|')} item={actual} />
+        )}
         <Volume />
       </div>
       <button className="icon-button mini-play-mobile" aria-label={active ? '暂停' : '播放'} onClick={toggle}>
@@ -164,14 +205,17 @@ export function Volume() {
 export function Frame({ children, overlay }: { children: ReactNode; overlay: ReactNode }) {
   const [main, setMain] = useState<HTMLElement | null>(null);
   const [scrolled, setScrolled] = useState(false);
-  const [canReturn,setCanReturn]=useState(false);
+  const [canReturn, setCanReturn] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const path = usePath();
   usePageMotion(main, path.split('?')[0]);
   useScrollMemory(main, path);
   useEffect(() => {
     if (!main) return;
-    const onScroll = () => {setScrolled(main.scrollTop > 8);setCanReturn(main.scrollTop>480);};
+    const onScroll = () => {
+      setScrolled(main.scrollTop > 8);
+      setCanReturn(main.scrollTop > 480);
+    };
     onScroll();
     main.addEventListener('scroll', onScroll, { passive: true });
     return () => main.removeEventListener('scroll', onScroll);
@@ -183,7 +227,17 @@ export function Frame({ children, overlay }: { children: ReactNode; overlay: Rea
         {children}
       </main>
       {overlay}
-      <button className={`back-to-top${canReturn?' is-visible':''}`} type="button" aria-label="回到顶部" title="回到顶部" aria-hidden={!canReturn} tabIndex={canReturn?0:-1} onClick={()=>main?.scrollTo({top:0,behavior:reduceMotion()?'instant':'smooth'})}><span/></button>
+      <button
+        className={`back-to-top${canReturn ? ' is-visible' : ''}`}
+        type="button"
+        aria-label="回到顶部"
+        title="回到顶部"
+        aria-hidden={!canReturn}
+        tabIndex={canReturn ? 0 : -1}
+        onClick={() => main?.scrollTo({ top: 0, behavior: reduceMotion() ? 'instant' : 'smooth' })}
+      >
+        <span />
+      </button>
       <TabBar />
     </div>
   );

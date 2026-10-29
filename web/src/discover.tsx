@@ -37,7 +37,16 @@ export function Discover() {
     <div className="page discover">
       <PageHeader title="发现" />
       {empty && <Empty title="暂时没有新歌" hint="稍后再来看看。" />}
-      <div className="discover-opening"><div className="discover-refresh"><span>发现有些不喜欢？</span><button className="text-button" onClick={load} disabled={busy} aria-label="换一批"><Icon name="sync" size={15} className={busy ? 'spin' : ''} /><strong>{busy ? '正在换…' : '换一批'}</strong></button></div>{blind.length > 0 && <BlindListen songs={blind} />}</div>
+      <div className="discover-opening">
+        <div className="discover-refresh">
+          <span>发现有些不喜欢？</span>
+          <button className="text-button" onClick={load} disabled={busy} aria-label="换一批">
+            <Icon name="sync" size={15} className={busy ? 'spin' : ''} />
+            <strong>{busy ? '正在换…' : '换一批'}</strong>
+          </button>
+        </div>
+        {blind.length > 0 && <BlindListen songs={blind} />}
+      </div>
       {data.picks.length > 0 && <Hand cards={data.picks} />}
       {data.radar.length > 2 && <Radar items={data.radar} />}
       {data.similar && <Mixtape seed={data.similar.seed} songs={data.similar.songs} />}
@@ -79,7 +88,7 @@ function BlindListen({ songs }: { songs: Pick[] }) {
   const song = songs[at];
   const live = current !== null && sameItem(current, song);
   const session = blindSession && sameItem(blindSession.item, song) ? blindSession : null;
-  const open = Boolean(peek && sameItem(peek, song) || session?.revealed);
+  const open = Boolean((peek && sameItem(peek, song)) || session?.revealed);
   const progress = Math.max(0, Math.min(1, (session?.seconds ?? 0) / 8));
   const next = () => {
     setIndex((i) => i + 1);
@@ -90,13 +99,33 @@ function BlindListen({ songs }: { songs: Pick[] }) {
       <span className="blind-bg" style={{ backgroundImage: song.cover ? `url("${sized(song.cover, 200)}")` : undefined }} />
       <div className="blind-lead">
         <span className="blind-tag">
-          <span className="blind-label">盲听</span><span className="blind-count">{at + 1} / {songs.length}</span>
+          <span className="blind-label">盲听</span>
+          <span className="blind-count">
+            {at + 1} / {songs.length}
+          </span>
         </span>
       </div>
-      <button className="blind-art" onClick={() => live && (session || open) ? toggle() : open ? play(songs, at) : playBlind(songs, at)} aria-label={open ? `${live && playing ? '暂停' : '播放'} ${song.title}` : live && session && playing ? '暂停盲听' : '盲听这一首'}>
+      <button
+        className="blind-art"
+        onClick={() => (live && (session || open) ? toggle() : open ? play(songs, at) : playBlind(songs, at))}
+        aria-label={open ? `${live && playing ? '暂停' : '播放'} ${song.title}` : live && session && playing ? '暂停盲听' : '盲听这一首'}
+      >
         <Cover src={song.cover} size={320} />
         <span className="blind-veil" aria-hidden="true">
-          {!open && <svg className="blind-progress" viewBox="0 0 84 84"><circle className="blind-progress-track" cx="42" cy="42" r="38" /><circle className="blind-progress-value" cx="42" cy="42" r="38" pathLength="1" strokeDasharray="1" strokeDashoffset={1 - progress} /></svg>}
+          {!open && (
+            <svg className="blind-progress" viewBox="0 0 84 84">
+              <circle className="blind-progress-track" cx="42" cy="42" r="38" />
+              <circle
+                className="blind-progress-value"
+                cx="42"
+                cy="42"
+                r="38"
+                pathLength="1"
+                strokeDasharray="1"
+                strokeDashoffset={1 - progress}
+              />
+            </svg>
+          )}
           <Icon className="blind-play" name={live && playing ? 'pause' : 'play'} size={30} />
         </span>
       </button>
@@ -105,13 +134,22 @@ function BlindListen({ songs }: { songs: Pick[] }) {
           <>
             <strong>{song.title}</strong>
             <small>{artistLine(song)}</small>
-
           </>
         ) : (
           <>
             <strong className="blind-mask">？？？？</strong>
-            {live && session && <small aria-live="polite">{loading?'准备中':playing?`${Math.max(1,Math.ceil(8-session.seconds))} 秒`:'已暂停'}</small>}
-            <button className="text-button blind-detail" onClick={() => { setPeek(song); if (session) revealBlind(); }}>
+            {live && session && (
+              <small aria-live="polite">
+                {loading ? '准备中' : playing ? `${Math.max(1, Math.ceil(8 - session.seconds))} 秒` : '已暂停'}
+              </small>
+            )}
+            <button
+              className="text-button blind-detail"
+              onClick={() => {
+                setPeek(song);
+                if (session) revealBlind();
+              }}
+            >
               揭晓
             </button>
           </>
@@ -136,7 +174,19 @@ function Hand({ cards }: { cards: Card[] }) {
   return (
     <section className="section">
       <Head title="精选歌单" />
-      <div className={`hand-wrap${lifted !== null ? ' is-pointing' : ''}`} onMouseLeave={() => setLifted(null)} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setLifted(null); }} style={{ '--mobile-step': `${Math.min(24, 76 / Math.max(1, n - 1))}px`, '--mobile-turn': `${Math.min(6, 20 / Math.max(1, n - 1))}deg` } as CSSProperties}>
+      <div
+        className={`hand-wrap${lifted !== null ? ' is-pointing' : ''}`}
+        onMouseLeave={() => setLifted(null)}
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget)) setLifted(null);
+        }}
+        style={
+          {
+            '--mobile-step': `${Math.min(24, 76 / Math.max(1, n - 1))}px`,
+            '--mobile-turn': `${Math.min(6, 20 / Math.max(1, n - 1))}deg`,
+          } as CSSProperties
+        }
+      >
         <ol className="hand-index">
           {cards.map((c, i) => (
             <li key={c.id} onMouseEnter={() => setLifted(i)} className={lifted === i ? 'is-on' : ''}>
@@ -174,7 +224,14 @@ function Hand({ cards }: { cards: Card[] }) {
 
 // Fixed spots on the scope (distance 0–1, angle in degrees), so blips stay put.
 const spots: [number, number][] = [
-  [0.36, 28], [0.7, 64], [0.52, 118], [0.83, 156], [0.3, 205], [0.66, 236], [0.86, 292], [0.48, 322],
+  [0.36, 28],
+  [0.7, 64],
+  [0.52, 118],
+  [0.83, 156],
+  [0.3, 205],
+  [0.66, 236],
+  [0.86, 292],
+  [0.48, 322],
 ];
 
 /** New songs picked for the listener as blips on a sweeping radar scope. */
@@ -189,25 +246,37 @@ function Radar({ items }: { items: Pick[] }) {
       <Head title="新歌雷达" />
       <div className="radar">
         <div className="radar-visual">
-        <div className="radar-scope" aria-label="新歌雷达，编号对应曲目列表">
-          <span className="radar-sweep" aria-hidden="true" />
-          {blips.map((item, i) => {
-            const [r, a] = spots[i];
-            const rad = (a * Math.PI) / 180;
-            // The sweep starts at 12 o'clock and turns once every 4 s; light up as it passes.
-            const style = {
-              left: `${50 + r * 44 * Math.cos(rad)}%`,
-              top: `${50 + r * 44 * Math.sin(rad)}%`,
-              animationDelay: `${(((a + 90) % 360) / 360) * 4 - 4}s`,
-            };
-            return (
-              <button key={i} className={`radar-blip${active === i ? ' is-pointed' : ''}${current && sameItem(current, item) ? ' is-current' : ''}`} style={style} onPointerEnter={() => setHovered(i)} onPointerLeave={() => setHovered(null)} onFocus={() => setFocused(i)} onBlur={() => setFocused(null)} onClick={() => play(items, i)} aria-label={`${String(i + 1).padStart(2, '0')} ${item.title}，${artistLine(item)}`}>
-                <Cover src={item.cover} size={64} />
-                <span className="radar-blip-no" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
-              </button>
-            );
-          })}
-        </div>
+          <div className="radar-scope" aria-label="新歌雷达，编号对应曲目列表">
+            <span className="radar-sweep" aria-hidden="true" />
+            {blips.map((item, i) => {
+              const [r, a] = spots[i];
+              const rad = (a * Math.PI) / 180;
+              // The sweep starts at 12 o'clock and turns once every 4 s; light up as it passes.
+              const style = {
+                left: `${50 + r * 44 * Math.cos(rad)}%`,
+                top: `${50 + r * 44 * Math.sin(rad)}%`,
+                animationDelay: `${(((a + 90) % 360) / 360) * 4 - 4}s`,
+              };
+              return (
+                <button
+                  key={i}
+                  className={`radar-blip${active === i ? ' is-pointed' : ''}${current && sameItem(current, item) ? ' is-current' : ''}`}
+                  style={style}
+                  onPointerEnter={() => setHovered(i)}
+                  onPointerLeave={() => setHovered(null)}
+                  onFocus={() => setFocused(i)}
+                  onBlur={() => setFocused(null)}
+                  onClick={() => play(items, i)}
+                  aria-label={`${String(i + 1).padStart(2, '0')} ${item.title}，${artistLine(item)}`}
+                >
+                  <Cover src={item.cover} size={64} />
+                  <span className="radar-blip-no" aria-hidden="true">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
         <ol className="radar-list">
           {items.slice(0, 12).map((item, i) => (
@@ -222,7 +291,13 @@ function Radar({ items }: { items: Pick[] }) {
               onBlur={() => setFocused(null)}
               onClick={() => play(items, i)}
               tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); play(items, i); } }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  play(items, i);
+                }
+              }}
             >
               <span className="radar-no">{String(i + 1).padStart(2, '0')}</span>
               <span className="song-text">
@@ -356,7 +431,13 @@ function Arrivals({ items }: { items: Pick[] }) {
               const i = h * Math.ceil(items.length / 2) + k;
               const on = current !== null && sameItem(current, s);
               return (
-                <button key={`${i}-${s.copies[0]?.id}`} className={`arrivals-row${on ? ' is-current' : ''}`} onClick={() => play(items, i)} aria-label={`${s.title}，${artistLine(s)}${on && playing ? '，正在播放' : ''}`} aria-pressed={on}>
+                <button
+                  key={`${i}-${s.copies[0]?.id}`}
+                  className={`arrivals-row${on ? ' is-current' : ''}`}
+                  onClick={() => play(items, i)}
+                  aria-label={`${s.title}，${artistLine(s)}${on && playing ? '，正在播放' : ''}`}
+                  aria-pressed={on}
+                >
                   <span className="flap">{regionCode(s.reason)}</span>
                   <Cover src={s.cover} size={40} />
                   <span className="arrivals-title">{s.title}</span>
@@ -429,7 +510,10 @@ function Tuner({ items }: { items: Pick[] }) {
   };
   const stationAt = (event: PointerEvent<HTMLDivElement>) => {
     const box = event.currentTarget.getBoundingClientRect();
-    return Math.max(0, Math.min(stations.length - 1, Math.floor(((event.clientX - box.left - 32) / Math.max(1, box.width - 64)) * stations.length)));
+    return Math.max(
+      0,
+      Math.min(stations.length - 1, Math.floor(((event.clientX - box.left - 32) / Math.max(1, box.width - 64)) * stations.length)),
+    );
   };
   const cancel = () => {
     drag.current = null;
@@ -447,7 +531,10 @@ function Tuner({ items }: { items: Pick[] }) {
     const dy = Math.abs(event.clientY - active.y);
     if (!active.horizontal) {
       // Leave vertical motion to the page; capture only after horizontal intent.
-      if (dy > 7 && dy > dx) { cancel(); return; }
+      if (dy > 7 && dy > dx) {
+        cancel();
+        return;
+      }
       if (dx < 7 || dx <= dy) return;
       active.horizontal = true;
       event.currentTarget.setPointerCapture(event.pointerId);
@@ -482,32 +569,58 @@ function Tuner({ items }: { items: Pick[] }) {
           </span>
         </button>
         <div className="tuner-controls">
-        <div className={`tuner-dial${tuning ? ' is-tuning' : ''}`} role="group" aria-label="收音机刻度盘，可左右拖动或选择电台" onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={(event) => { if (drag.current?.id === event.pointerId) cancel(); }} onLostPointerCapture={(event) => { if (event.target === event.currentTarget && drag.current?.id === event.pointerId) cancel(); }} onClickCapture={(event) => { if (event.detail > 0 && Date.now() < suppressClickUntil.current) { event.preventDefault(); event.stopPropagation(); suppressClickUntil.current = 0; } }}>
-          <div className="tuner-scale" aria-hidden="true">
-            {[90, 94, 98, 102, 106].map((f) => (
-              <span key={f} style={{ left: `${((f - 87.5) / 20.5) * 100}%` }}>
-                {f}
-              </span>
+          <div
+            className={`tuner-dial${tuning ? ' is-tuning' : ''}`}
+            role="group"
+            aria-label="收音机刻度盘，可左右拖动或选择电台"
+            onPointerDown={pointerDown}
+            onPointerMove={pointerMove}
+            onPointerUp={pointerUp}
+            onPointerCancel={(event) => {
+              if (drag.current?.id === event.pointerId) cancel();
+            }}
+            onLostPointerCapture={(event) => {
+              if (event.target === event.currentTarget && drag.current?.id === event.pointerId) cancel();
+            }}
+            onClickCapture={(event) => {
+              if (event.detail > 0 && Date.now() < suppressClickUntil.current) {
+                event.preventDefault();
+                event.stopPropagation();
+                suppressClickUntil.current = 0;
+              }
+            }}
+          >
+            <div className="tuner-scale" aria-hidden="true">
+              {[90, 94, 98, 102, 106].map((f) => (
+                <span key={f} style={{ left: `${((f - 87.5) / 20.5) * 100}%` }}>
+                  {f}
+                </span>
+              ))}
+            </div>
+            {stations.map((s, i) => (
+              <button
+                key={`${i}-${s.copies[0]?.id}`}
+                className={`tuner-station${i === at ? ' is-on' : ''}${current && sameItem(current, s) ? ' is-current' : ''}`}
+                style={{ left: left(i) }}
+                onPointerEnter={(event) => {
+                  if (event.pointerType === 'mouse' && !drag.current) setPreview(i);
+                }}
+                onPointerLeave={() => {
+                  if (!drag.current) setPreview(null);
+                }}
+                onFocus={() => setPreview(i)}
+                onBlur={() => {
+                  if (!drag.current) setPreview(null);
+                }}
+                onClick={() => start(i)}
+                aria-label={`FM ${freq(i)} ${s.title}${current && sameItem(current, s) ? '，当前歌曲' : ''}`}
+                aria-pressed={Boolean(current && sameItem(current, s))}
+              >
+                <Cover src={s.cover} size={48} />
+              </button>
             ))}
+            <span className="tuner-needle" style={{ left: left(at) }} aria-hidden="true" />
           </div>
-          {stations.map((s, i) => (
-            <button
-              key={`${i}-${s.copies[0]?.id}`}
-              className={`tuner-station${i === at ? ' is-on' : ''}${current && sameItem(current, s) ? ' is-current' : ''}`}
-              style={{ left: left(i) }}
-              onPointerEnter={(event) => { if (event.pointerType === 'mouse' && !drag.current) setPreview(i); }}
-              onPointerLeave={() => { if (!drag.current) setPreview(null); }}
-              onFocus={() => setPreview(i)}
-              onBlur={() => { if (!drag.current) setPreview(null); }}
-              onClick={() => start(i)}
-              aria-label={`FM ${freq(i)} ${s.title}${current && sameItem(current, s) ? '，当前歌曲' : ''}`}
-              aria-pressed={Boolean(current && sameItem(current, s))}
-            >
-              <Cover src={s.cover} size={48} />
-            </button>
-          ))}
-          <span className="tuner-needle" style={{ left: left(at) }} aria-hidden="true" />
-        </div>
         </div>
       </div>
     </section>

@@ -17,12 +17,24 @@ function rememberCover(url: string) {
   if (loadedCovers.size > 512) loadedCovers.delete(loadedCovers.values().next().value!);
 }
 
-export function Cover({ src, size, className = '', alt = '', eager = false }: { src?: string; size: number; className?: string; alt?: string; eager?: boolean }) {
+export function Cover({
+  src,
+  size,
+  className = '',
+  alt = '',
+  eager = false,
+}: {
+  src?: string;
+  size: number;
+  className?: string;
+  alt?: string;
+  eager?: boolean;
+}) {
   const url = sized(src || '', size * 2);
   const latest = useRef(src);
   latest.current = src;
   const [image, setImage] = useState({ src, loaded: false, failed: false });
-  if (!src || image.src === src && image.failed) {
+  if (!src || (image.src === src && image.failed)) {
     return (
       <span className={`cover cover-empty ${className}`} aria-hidden={!alt}>
         <Icon name="note" size={Math.max(14, Math.round(size / 3))} />
@@ -30,10 +42,20 @@ export function Cover({ src, size, className = '', alt = '', eager = false }: { 
     );
   }
   return (
-    <span className={`cover cover-art${loadedCovers.has(url) || image.src === src && image.loaded ? ' is-loaded' : ''} ${className}`}>
-      <img key={src} className="cover-image" src={url} alt={alt} loading={eager ? 'eager' : 'lazy'} decoding="async"
-        onLoad={() => { rememberCover(url); if (latest.current === src) setImage({ src, loaded: true, failed: false }); }}
-        onError={() => latest.current === src && setImage({ src, loaded: false, failed: true })} />
+    <span className={`cover cover-art${loadedCovers.has(url) || (image.src === src && image.loaded) ? ' is-loaded' : ''} ${className}`}>
+      <img
+        key={src}
+        className="cover-image"
+        src={url}
+        alt={alt}
+        loading={eager ? 'eager' : 'lazy'}
+        decoding="async"
+        onLoad={() => {
+          rememberCover(url);
+          if (latest.current === src) setImage({ src, loaded: true, failed: false });
+        }}
+        onError={() => latest.current === src && setImage({ src, loaded: false, failed: true })}
+      />
     </span>
   );
 }
@@ -75,32 +97,58 @@ export function Heart({ item, size = 17 }: { item: Item; size?: number }) {
 export function DownloadButton({ item }: { item: Item }) {
   const [saving, setSaving] = useState(false);
   const { records } = useLocalAudio('download');
-  const saved = records.some(record => record.downloadKey === downloadKey(item));
+  const saved = records.some((record) => record.downloadKey === downloadKey(item));
   const localID = localAudioID(item);
-  const label = saving ? localID ? '正在另存为' : '正在下载' : localID ? '另存为' : saved ? '已下载' : '下载';
-  return <button type="button" className="icon-button" aria-label={label} title={label} disabled={saving || saved && !localID} aria-busy={saving}
-    onClick={async event => {
-      event.stopPropagation();
-      if (saving || saved && !localID) return;
-      setSaving(true);
-      try {
-        if (localID) await exportLocalAudio(localID);
-        else { await downloadAudio(item); toast('已下载到本地'); }
-      } catch (error) { toast(error instanceof Error ? error.message : '下载失败，请重试'); }
-      finally { setSaving(false); }
-    }}>
-    <Icon name={saving ? 'sync' : saved && !localID ? 'check' : 'download'} size={18} className={saving ? 'spin' : undefined}/>
-  </button>;
+  const label = saving ? (localID ? '正在另存为' : '正在下载') : localID ? '另存为' : saved ? '已下载' : '下载';
+  return (
+    <button
+      type="button"
+      className="icon-button"
+      aria-label={label}
+      title={label}
+      disabled={saving || (saved && !localID)}
+      aria-busy={saving}
+      onClick={async (event) => {
+        event.stopPropagation();
+        if (saving || (saved && !localID)) return;
+        setSaving(true);
+        try {
+          if (localID) await exportLocalAudio(localID);
+          else {
+            await downloadAudio(item);
+            toast('已下载到本地');
+          }
+        } catch (error) {
+          toast(error instanceof Error ? error.message : '下载失败，请重试');
+        } finally {
+          setSaving(false);
+        }
+      }}
+    >
+      <Icon name={saving ? 'sync' : saved && !localID ? 'check' : 'download'} size={18} className={saving ? 'spin' : undefined} />
+    </button>
+  );
 }
 
 export function BulkDownloadButton({ items, name }: { items: Item[]; name: string }) {
   const batch = useAudioDownloadBatch();
   const busy = batchIsRunning(batch);
-  return <button type="button" className="pill bulk-download-button" aria-label="全部下载" aria-busy={busy}
-    disabled={!items.length || busy} title={busy ? '已有歌单正在批量下载' : '下载当前歌单的全部歌曲'}
-    onClick={() => { if (startAudioDownloadBatch(items, name)) toast('已开始逐首下载，可在下载管理查看'); }}>
-    <Icon name={busy ? 'sync' : 'download'} size={15} className={busy ? 'spin' : undefined}/>{busy ? '下载中' : '全部下载'}
-  </button>;
+  return (
+    <button
+      type="button"
+      className="pill bulk-download-button"
+      aria-label="全部下载"
+      aria-busy={busy}
+      disabled={!items.length || busy}
+      title={busy ? '已有歌单正在批量下载' : '下载当前歌单的全部歌曲'}
+      onClick={() => {
+        if (startAudioDownloadBatch(items, name)) toast('已开始逐首下载，可在下载管理查看');
+      }}
+    >
+      <Icon name={busy ? 'sync' : 'download'} size={15} className={busy ? 'spin' : undefined} />
+      {busy ? '下载中' : '全部下载'}
+    </button>
+  );
 }
 
 /** The "…" menu every song carries. */
@@ -117,11 +165,18 @@ export function SongMenu({ item, onRemove, removeLabel = '从歌单移除' }: { 
   useEffect(() => {
     if (!open) return;
     const close = (e: Event) => !ref.current?.contains(e.target as Node) && !panel.current?.contains(e.target as Node) && setOpen(false);
-    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); setOpen(false); trigger.current?.focus(); } };
+    const escape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        setOpen(false);
+        trigger.current?.focus();
+      }
+    };
     const scroll = (e: Event) => {
-      const target=e.target;
+      const target = e.target;
       if (panel.current?.contains(target as Node)) return;
-      if(target===document || target instanceof Element && target.contains(trigger.current))setOpen(false);
+      if (target === document || (target instanceof Element && target.contains(trigger.current))) setOpen(false);
     };
     const resize = () => setOpen(false);
     document.addEventListener('pointerdown', close);
@@ -139,8 +194,11 @@ export function SongMenu({ item, onRemove, removeLabel = '从歌单移除' }: { 
     if (!open || !panel.current || !trigger.current) return;
     const menu = panel.current;
     const anchor = trigger.current.getBoundingClientRect();
-    const boundary = window.visualViewport ? Math.min(innerHeight, window.visualViewport.height + window.visualViewport.offsetTop) : innerHeight;
-    const bottomBar = !ref.current?.closest('.now-playing') && document.querySelector<HTMLElement>('.mini-player, .tab-bar')?.getBoundingClientRect();
+    const boundary = window.visualViewport
+      ? Math.min(innerHeight, window.visualViewport.height + window.visualViewport.offsetTop)
+      : innerHeight;
+    const bottomBar =
+      !ref.current?.closest('.now-playing') && document.querySelector<HTMLElement>('.mini-player, .tab-bar')?.getBoundingClientRect();
     const bottom = bottomBar ? Math.min(boundary - 8, bottomBar.top - 8) : boundary - 8;
     menu.style.maxHeight = `${Math.max(100, boundary - 24)}px`;
     const height = menu.getBoundingClientRect().height;
@@ -170,63 +228,116 @@ export function SongMenu({ item, onRemove, removeLabel = '从歌单移除' }: { 
   };
   return (
     <div className="menu-anchor" ref={ref} onClick={(e) => e.stopPropagation()}>
-      <button ref={trigger} className="icon-button more" aria-label="更多" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} onKeyDown={(event) => {
-        if (event.key === 'ArrowDown') { event.preventDefault(); setOpen(true); requestAnimationFrame(() => panel.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()); }
-      }}>
+      <button
+        ref={trigger}
+        className="icon-button more"
+        aria-label="更多"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            setOpen(true);
+            requestAnimationFrame(() => panel.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus());
+          }
+        }}
+      >
         <Icon name="more" size={18} />
       </button>
-      {open && createPortal(
-        <div className="menu" role="menu" ref={panel} onClick={(event) => event.stopPropagation()} onKeyDown={(event) => {
-          const items = [...(panel.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? [])];
-          const index = items.indexOf(document.activeElement as HTMLButtonElement);
-          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); items[(index + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length]?.focus(); }
-          if (event.key === 'Home' || event.key === 'End') { event.preventDefault(); items[event.key === 'Home' ? 0 : items.length - 1]?.focus(); }
-          if (event.key === 'Tab') { event.preventDefault(); setOpen(false); trigger.current?.focus(); }
-        }}>
-          <button role="menuitem" onClick={run(() => playNext(item))}>
-            <Icon name="queue" size={16} />
-            接下来播放
-          </button>
-          <button role="menuitem" onClick={run(() => addToQueue(item))}>
-            <Icon name="plus" size={16} />
-            加入待播
-          </button>
-          <button role="menuitem" disabled={saving} aria-busy={saving} onClick={() => { void save(); }}>
-            <Icon name="download" size={16} />
-            {saving ? localID ? '正在另存为…' : '正在下载…' : localID ? '另存为…' : '下载'}
-          </button>
-          {!localID && <>
-            <div className="menu-label">加入歌单</div>
-            <div className="menu-scroll">
-              {own.map((p) => (
-                <button role="menuitem" key={p.id} onClick={run(() => addTo(p.id, [item]))}>
-                  <Icon name="note" size={16} />
-                  {p.name}
-                </button>
-              ))}
-              <button
-                role="menuitem"
-                onClick={run(() => setCreating(true))}
-              >
-                <Icon name="plus" size={16} />
-                新建歌单…
-              </button>
-            </div>
-          </>}
-          {onRemove && (
-            <button role="menuitem" className="danger" onClick={run(onRemove)}>
-              <Icon name="close" size={16} />
-              {removeLabel}
+      {open &&
+        createPortal(
+          <div
+            className="menu"
+            role="menu"
+            ref={panel}
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => {
+              const items = [...(panel.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? [])];
+              const index = items.indexOf(document.activeElement as HTMLButtonElement);
+              if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                items[(index + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length]?.focus();
+              }
+              if (event.key === 'Home' || event.key === 'End') {
+                event.preventDefault();
+                items[event.key === 'Home' ? 0 : items.length - 1]?.focus();
+              }
+              if (event.key === 'Tab') {
+                event.preventDefault();
+                setOpen(false);
+                trigger.current?.focus();
+              }
+            }}
+          >
+            <button role="menuitem" onClick={run(() => playNext(item))}>
+              <Icon name="queue" size={16} />
+              接下来播放
             </button>
-          )}
-        </div>, ref.current?.closest('dialog') || document.body
+            <button role="menuitem" onClick={run(() => addToQueue(item))}>
+              <Icon name="plus" size={16} />
+              加入待播
+            </button>
+            <button
+              role="menuitem"
+              disabled={saving}
+              aria-busy={saving}
+              onClick={() => {
+                void save();
+              }}
+            >
+              <Icon name="download" size={16} />
+              {saving ? (localID ? '正在另存为…' : '正在下载…') : localID ? '另存为…' : '下载'}
+            </button>
+            {!localID && (
+              <>
+                <div className="menu-label">加入歌单</div>
+                <div className="menu-scroll">
+                  {own.map((p) => (
+                    <button role="menuitem" key={p.id} onClick={run(() => addTo(p.id, [item]))}>
+                      <Icon name="note" size={16} />
+                      {p.name}
+                    </button>
+                  ))}
+                  <button role="menuitem" onClick={run(() => setCreating(true))}>
+                    <Icon name="plus" size={16} />
+                    新建歌单…
+                  </button>
+                </div>
+              </>
+            )}
+            {onRemove && (
+              <button role="menuitem" className="danger" onClick={run(onRemove)}>
+                <Icon name="close" size={16} />
+                {removeLabel}
+              </button>
+            )}
+          </div>,
+          ref.current?.closest('dialog') || document.body,
+        )}
+      {creating && !localID && (
+        <ActionDialog
+          title="新建歌单"
+          inputLabel="歌单名称"
+          confirmLabel="创建"
+          onClose={() => setCreating(false)}
+          onConfirm={async (name) => {
+            await addTo(await createPlaylist(name), [item]);
+          }}
+        />
       )}
-      {creating && !localID && <ActionDialog title="新建歌单" inputLabel="歌单名称" confirmLabel="创建" onClose={() => setCreating(false)} onConfirm={async (name) => { await addTo(await createPlaylist(name), [item]); }} />}
     </div>
   );
 }
 
-type ListProps = { items: Item[]; numbered?: boolean; showAlbum?: boolean; onRemove?: (item: Item) => void; removeLabel?: string; empty?: ReactNode };
+type ListProps = {
+  items: Item[];
+  numbered?: boolean;
+  showAlbum?: boolean;
+  onRemove?: (item: Item) => void;
+  removeLabel?: string;
+  empty?: ReactNode;
+};
 
 /** A full-width song list: tap a row to play the list from there. */
 export function SongList({ items, numbered, showAlbum = true, onRemove, removeLabel, empty }: ListProps) {
@@ -245,12 +356,18 @@ export function SongList({ items, numbered, showAlbum = true, onRemove, removeLa
             tabIndex={0}
           >
             {numbered && <span className="song-number">{active && playing ? <Bars /> : i + 1}</span>}
-            <span className="song-lead"><Cover src={item.cover} size={40} /></span>
+            <span className="song-lead">
+              <Cover src={item.cover} size={40} />
+            </span>
             <span className="song-text">
               <strong>{item.title}</strong>
               <small>{inspectionID(item) ? '多分P' : artistLine(item)}</small>
             </span>
-            {showAlbum && <span className="song-album" title={item.album}>{item.album || '—'}</span>}
+            {showAlbum && (
+              <span className="song-album" title={item.album}>
+                {item.album || '—'}
+              </span>
+            )}
             <span className="song-actions">
               <Heart item={item} />
               <span className="song-time">{clock(item.duration)}</span>
@@ -336,9 +453,13 @@ export function PageHeader({ title, children, search = true }: { title: string; 
   return (
     <header className={`page-header${compact ? ' is-compact' : ''}`}>
       <h1 className={compact ? 'sr-only' : undefined}>{title}</h1>
-      {secondary ? <BackButton /> : <Link to="/settings" className="mobile-settings-logo" label="设置">
-        <img src="/brand/husic-icon.svg?v=0.2.0" alt="" width={28} height={28} />
-      </Link>}
+      {secondary ? (
+        <BackButton />
+      ) : (
+        <Link to="/settings" className="mobile-settings-logo" label="设置">
+          <img src="/brand/husic-icon.svg?v=0.2.0" alt="" width={28} height={28} />
+        </Link>
+      )}
       <div className="page-actions">
         {children}
         {search && (
@@ -352,7 +473,11 @@ export function PageHeader({ title, children, search = true }: { title: string; 
 }
 
 export function BackButton() {
-  return <button className="mobile-back icon-button" aria-label="返回上一页" onClick={goBack}><Icon name="chevron" size={21} /></button>;
+  return (
+    <button className="mobile-back icon-button" aria-label="返回上一页" onClick={goBack}>
+      <Icon name="chevron" size={21} />
+    </button>
+  );
 }
 
 /** Grey shapes in the page's layout while its first answer is on the way. */

@@ -46,10 +46,13 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
   const keys = (item: Item) => [...(item.songId ? [`song:${item.songId}`] : []), ...item.copies.map(refOf)];
 
-  const isLiked = useCallback((item: Item) => {
-    const localID = localAudioID(item);
-    return localID ? localLikes.get(localID) ?? item.liked : keys(item).some((k) => liked.has(k));
-  }, [liked, localLikes]);
+  const isLiked = useCallback(
+    (item: Item) => {
+      const localID = localAudioID(item);
+      return localID ? (localLikes.get(localID) ?? item.liked) : keys(item).some((k) => liked.has(k));
+    },
+    [liked, localLikes],
+  );
 
   const toggleLike = useCallback(
     async (item: Item) => {
@@ -86,34 +89,43 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     [liked, localLikes],
   );
 
-  const addTo = useCallback(async (playlistId: number, items: Item[]) => {
-    if (items.some((item) => localAudioID(item))) {
-      toast('本地音乐不能加入在线歌单');
-      return;
-    }
-    try {
-      await api.addToPlaylist(playlistId, items);
-      toast('已加入歌单');
+  const addTo = useCallback(
+    async (playlistId: number, items: Item[]) => {
+      if (items.some((item) => localAudioID(item))) {
+        toast('本地音乐不能加入在线歌单');
+        return;
+      }
+      try {
+        await api.addToPlaylist(playlistId, items);
+        toast('已加入歌单');
+        setVersion((v) => v + 1);
+        refresh();
+      } catch {
+        toast('没能加入歌单');
+      }
+    },
+    [refresh],
+  );
+
+  const createPlaylist = useCallback(
+    async (name: string) => {
+      const { id } = await api.createPlaylist(name);
+      refresh();
+      setVersion((v) => v + 1);
+      return id;
+    },
+    [refresh],
+  );
+
+  const renamePlaylist = useCallback(
+    async (playlist: Playlist, name: string) => {
+      await api.renamePlaylist(playlist.id, name, playlist.description, playlist.cover);
+      setPlaylists((current) => current.map((p) => (p.id === playlist.id ? { ...p, name } : p)));
       setVersion((v) => v + 1);
       refresh();
-    } catch {
-      toast('没能加入歌单');
-    }
-  }, [refresh]);
-
-  const createPlaylist = useCallback(async (name: string) => {
-    const { id } = await api.createPlaylist(name);
-    refresh();
-    setVersion((v) => v + 1);
-    return id;
-  }, [refresh]);
-
-  const renamePlaylist = useCallback(async (playlist: Playlist, name: string) => {
-    await api.renamePlaylist(playlist.id, name, playlist.description, playlist.cover);
-    setPlaylists(current => current.map(p => p.id === playlist.id ? { ...p, name } : p));
-    setVersion(v => v + 1);
-    refresh();
-  }, [refresh]);
+    },
+    [refresh],
+  );
 
   const value = useMemo(
     () => ({ playlists, isLiked, toggleLike, addTo, createPlaylist, renamePlaylist, refresh, version }),

@@ -40,10 +40,41 @@ function Failed({ message }: { message?: string }) {
 }
 
 export function Search() {
-  const initial=query(usePath(),'q');
-  const [results,setResults]=useState<Item[]|null>(null),[busy,setBusy]=useState(false);
-  useEffect(()=>{let live=true;setResults(null);if(!initial){setBusy(false);return;}rememberSearch(initial);setBusy(true);searchMusic(initial).then(r=>{if(live)setResults(r.songs);}).catch(()=>{if(live)toast('搜索失败');}).finally(()=>{if(live)setBusy(false);});return()=>{live=false;};},[initial]);
-  return <div className="page search-page"><PageHeader title="搜索" search={false}><SearchField initial={initial} onSearch={q=>navigate(`/search?q=${encodeURIComponent(q)}`,Boolean(initial))}/></PageHeader>{busy&&<Loading/>}{!busy&&results&&<SongList items={results} empty={<Empty title="没有找到"/>}/>}</div>;
+  const initial = query(usePath(), 'q');
+  const [results, setResults] = useState<Item[] | null>(null),
+    [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let live = true;
+    setResults(null);
+    if (!initial) {
+      setBusy(false);
+      return;
+    }
+    rememberSearch(initial);
+    setBusy(true);
+    searchMusic(initial)
+      .then((r) => {
+        if (live) setResults(r.songs);
+      })
+      .catch(() => {
+        if (live) toast('搜索失败');
+      })
+      .finally(() => {
+        if (live) setBusy(false);
+      });
+    return () => {
+      live = false;
+    };
+  }, [initial]);
+  return (
+    <div className="page search-page">
+      <PageHeader title="搜索" search={false}>
+        <SearchField initial={initial} onSearch={(q) => navigate(`/search?q=${encodeURIComponent(q)}`, Boolean(initial))} />
+      </PageHeader>
+      {busy && <Loading />}
+      {!busy && results && <SongList items={results} empty={<Empty title="没有找到" />} />}
+    </div>
+  );
 }
 
 export function Library() {
@@ -74,10 +105,7 @@ export function Library() {
       <Section
         title="歌单"
         action={
-          <button
-            className="text-button"
-            onClick={() => setCreating(true)}
-          >
+          <button className="text-button" onClick={() => setCreating(true)}>
             <Icon name="plus" size={13} />
             新建
           </button>
@@ -86,10 +114,24 @@ export function Library() {
         {playlists.length === 0 ? (
           <Empty title="还没有歌单" />
         ) : (
-          <div className="tiles">{playlists.map((p) => <PlaylistTile key={p.id} playlist={p} />)}</div>
+          <div className="tiles">
+            {playlists.map((p) => (
+              <PlaylistTile key={p.id} playlist={p} />
+            ))}
+          </div>
         )}
       </Section>
-      {creating && <ActionDialog title="新建歌单" inputLabel="歌单名称" confirmLabel="创建" onClose={() => setCreating(false)} onConfirm={async (name) => { await createPlaylist(name); }} />}
+      {creating && (
+        <ActionDialog
+          title="新建歌单"
+          inputLabel="歌单名称"
+          confirmLabel="创建"
+          onClose={() => setCreating(false)}
+          onConfirm={async (name) => {
+            await createPlaylist(name);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -99,12 +141,19 @@ export function Liked() {
   const { data, error, loading } = useLoad(() => api.library(), [], version);
   const { records, loading: localLoading, error: localError } = useLocalAudio();
   const songs = [...records.filter((record) => record.liked).map((record) => record.item), ...(data?.likes ?? [])];
-  if ((loading && !data || localLoading) && songs.length === 0) return <Loading />;
+  if (((loading && !data) || localLoading) && songs.length === 0) return <Loading />;
   if (!data && (error || localError) && songs.length === 0) return <Failed message={error || localError} />;
   return (
     <div className="page collection-page">
-      <nav className="collection-navigation" aria-label="页面导航"><BackButton /></nav>
-      <CollectionHeader title="我喜欢" subtitle={`${songs.length} 首歌`} art={<CollectionCover coverKey="liked" title="我喜欢" src={songs[0]?.cover} liked/>} items={songs} />
+      <nav className="collection-navigation" aria-label="页面导航">
+        <BackButton />
+      </nav>
+      <CollectionHeader
+        title="我喜欢"
+        subtitle={`${songs.length} 首歌`}
+        art={<CollectionCover coverKey="liked" title="我喜欢" src={songs[0]?.cover} liked />}
+        items={songs}
+      />
       <SongList items={songs} empty={<Empty title="还没有喜欢的歌" />} />
     </div>
   );
@@ -114,8 +163,10 @@ export function Recent() {
   const { data, error, loading } = useLoad(() => api.home(), []);
   const { records, loading: localLoading, error: localError } = useLocalAudio();
   const localRecent = records.filter((record) => record.playedAt).map((record) => ({ ...record.item, playedAt: record.playedAt }));
-  const songs = [...localRecent, ...(data?.recent ?? [])].sort((a, b) => (Date.parse(b.playedAt || '') || 0) - (Date.parse(a.playedAt || '') || 0));
-  if ((loading && !data || localLoading) && songs.length === 0) return <Loading />;
+  const songs = [...localRecent, ...(data?.recent ?? [])].sort(
+    (a, b) => (Date.parse(b.playedAt || '') || 0) - (Date.parse(a.playedAt || '') || 0),
+  );
+  if (((loading && !data) || localLoading) && songs.length === 0) return <Loading />;
   if (!data && (error || localError) && songs.length === 0) return <Failed message={error || localError} />;
   return (
     <div className="page">
@@ -138,12 +189,14 @@ export function PlaylistPage({ id }: { id: number }) {
   const subtitle = `${songs.length} 首歌`;
   return (
     <div className="page playlist-page">
-      <nav className="collection-navigation" aria-label="页面导航"><BackButton /></nav>
+      <nav className="collection-navigation" aria-label="页面导航">
+        <BackButton />
+      </nav>
       <CollectionHeader
         title={p.name}
         subtitle={subtitle}
         note={p.description}
-        art={<CollectionCover coverKey={`playlist:${p.id}`} title={p.name} src={p.cover||songs[0]?.cover}/>}
+        art={<CollectionCover coverKey={`playlist:${p.id}`} title={p.name} src={p.cover || songs[0]?.cover} />}
         items={songs}
         menu={<PlaylistActions onRename={() => setRenaming(true)} onDelete={() => setDeleting(true)} />}
         extra={<BulkDownloadButton items={songs} name={p.name} />}
@@ -158,8 +211,32 @@ export function PlaylistPage({ id }: { id: number }) {
         }}
         empty={<Empty title="歌单是空的" />}
       />
-      {renaming && <ActionDialog title="重命名歌单" inputLabel="歌单名称" initialValue={p.name} confirmLabel="保存" onClose={() => setRenaming(false)} onConfirm={async name => { await renamePlaylist(p, name); toast('歌单已重命名'); }} />}
-      {deleting && <ActionDialog title="删除歌单" description={`从 Husic 中删除「${p.name}」？不会删除歌曲或音乐平台上的歌单。`} confirmLabel="删除歌单" onClose={() => setDeleting(false)} onConfirm={async () => { await api.deletePlaylist(p.id); refresh(); navigate('/library'); }} />}
+      {renaming && (
+        <ActionDialog
+          title="重命名歌单"
+          inputLabel="歌单名称"
+          initialValue={p.name}
+          confirmLabel="保存"
+          onClose={() => setRenaming(false)}
+          onConfirm={async (name) => {
+            await renamePlaylist(p, name);
+            toast('歌单已重命名');
+          }}
+        />
+      )}
+      {deleting && (
+        <ActionDialog
+          title="删除歌单"
+          description={`从 Husic 中删除「${p.name}」？不会删除歌曲或音乐平台上的歌单。`}
+          confirmLabel="删除歌单"
+          onClose={() => setDeleting(false)}
+          onConfirm={async () => {
+            await api.deletePlaylist(p.id);
+            refresh();
+            navigate('/library');
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -170,12 +247,14 @@ export function RemotePlaylist({ id }: { id: string }) {
   if (error || !data) return <Failed message={error} />;
   return (
     <div className="page playlist-page">
-      <nav className="collection-navigation" aria-label="页面导航"><BackButton /></nav>
+      <nav className="collection-navigation" aria-label="页面导航">
+        <BackButton />
+      </nav>
       <CollectionHeader
         title={data.playlist.name}
         subtitle={`${data.songs.length} 首歌`}
         note={data.playlist.note}
-        art={<CollectionCover coverKey={`netease:${id}`} title={data.playlist.name} src={data.playlist.cover||data.songs[0]?.cover}/>}
+        art={<CollectionCover coverKey={`netease:${id}`} title={data.playlist.name} src={data.playlist.cover || data.songs[0]?.cover} />}
         items={data.songs}
         extra={<BulkDownloadButton items={data.songs} name={data.playlist.name} />}
       />
@@ -184,8 +263,22 @@ export function RemotePlaylist({ id }: { id: string }) {
   );
 }
 
-export function CollectionHeader({ title, subtitle, note, art, items, extra, menu }: {
-  title: string; subtitle: string; note?: string; art: React.ReactNode; items: Item[]; extra?: React.ReactNode; menu?: React.ReactNode;
+export function CollectionHeader({
+  title,
+  subtitle,
+  note,
+  art,
+  items,
+  extra,
+  menu,
+}: {
+  title: string;
+  subtitle: string;
+  note?: string;
+  art: React.ReactNode;
+  items: Item[];
+  extra?: React.ReactNode;
+  menu?: React.ReactNode;
 }) {
   return (
     <header className={`collection-header${menu ? ' has-menu' : ''}`}>

@@ -9,10 +9,16 @@ try {
   const saved = JSON.parse(localStorage.getItem(key) || '{}');
   if (Number.isSafeInteger(saved.duration) && saved.duration > 0 && saved.duration < 86400) duration = saved.duration;
   if (Number.isSafeInteger(saved.deadline) && saved.deadline > 0) deadline = saved.deadline;
-} catch { /* A timer still works when this browser cannot save preferences. */ }
+} catch {
+  /* A timer still works when this browser cannot save preferences. */
+}
 
 function publish() {
-  try { localStorage.setItem(key, JSON.stringify({ deadline, duration })); } catch { /* Session-only is fine. */ }
+  try {
+    localStorage.setItem(key, JSON.stringify({ deadline, duration }));
+  } catch {
+    /* Session-only is fine. */
+  }
   listeners.forEach((listener) => listener());
 }
 export function startSleepTimer(seconds: number) {
@@ -21,8 +27,13 @@ export function startSleepTimer(seconds: number) {
   deadline = Date.now() + seconds * 1000;
   publish();
 }
-export function cancelSleepTimer() { deadline = null; publish(); }
-export function lastSleepDuration() { return duration; }
+export function cancelSleepTimer() {
+  deadline = null;
+  publish();
+}
+export function lastSleepDuration() {
+  return duration;
+}
 export function consumeExpiredSleepTimer() {
   if (deadline === null || Date.now() < deadline) return false;
   deadline = null;
@@ -31,9 +42,13 @@ export function consumeExpiredSleepTimer() {
 }
 function subscribe(listener: () => void) {
   listeners.add(listener);
-  return () => { listeners.delete(listener); };
+  return () => {
+    listeners.delete(listener);
+  };
 }
-export function useSleepDeadline() { return useSyncExternalStore(subscribe, () => deadline); }
+export function useSleepDeadline() {
+  return useSyncExternalStore(subscribe, () => deadline);
+}
 export function useSleepRemaining() {
   const end = useSleepDeadline();
   const visible = usePageVisible();
@@ -48,8 +63,7 @@ export function useSleepRemaining() {
   return { deadline: end, seconds: end === null ? 0 : Math.max(0, Math.ceil((end - now) / 1000)) };
 }
 export function sleepClock(seconds: number) {
-  return [Math.floor(seconds / 3600), Math.floor(seconds / 60) % 60, seconds % 60]
-    .map((value) => String(value).padStart(2, '0')).join(':');
+  return [Math.floor(seconds / 3600), Math.floor(seconds / 60) % 60, seconds % 60].map((value) => String(value).padStart(2, '0')).join(':');
 }
 
 /** One deadline for this device, independent of the settings page and track.
@@ -60,7 +74,8 @@ export function useSleepTimerPlayback(audio: HTMLAudioElement, stopIfExpired: ()
     let watchingTime = false;
     const check = () => {
       clearTimeout(timer);
-      const expired = stopIfExpired(), active = deadline !== null;
+      const expired = stopIfExpired(),
+        active = deadline !== null;
       if (watchingTime !== active) {
         watchingTime = active;
         if (active) audio.addEventListener('timeupdate', check);
@@ -74,7 +89,9 @@ export function useSleepTimerPlayback(audio: HTMLAudioElement, stopIfExpired: ()
       try {
         const saved = JSON.parse(event.newValue || '{}');
         deadline = Number.isSafeInteger(saved.deadline) && saved.deadline > 0 ? saved.deadline : null;
-      } catch { deadline = null; }
+      } catch {
+        deadline = null;
+      }
       listeners.forEach((listener) => listener());
     };
     const unsubscribe = subscribe(check);
@@ -86,7 +103,8 @@ export function useSleepTimerPlayback(audio: HTMLAudioElement, stopIfExpired: ()
     window.addEventListener('storage', storage);
     check();
     return () => {
-      clearTimeout(timer); unsubscribe();
+      clearTimeout(timer);
+      unsubscribe();
       audio.removeEventListener('timeupdate', check);
       events.forEach((event) => audio.removeEventListener(event, check));
       document.removeEventListener('visibilitychange', check);

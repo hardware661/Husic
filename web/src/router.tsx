@@ -28,7 +28,11 @@ export function navigate(path: string, replace = false) {
   const rootPath = path.split('?')[0];
   const root = matchMedia('(max-width: 760px)').matches && ['/', '/discover', '/charts', '/library', '/settings'].includes(rootPath);
   replace ||= root;
-  currentEntry = root ? { key: `tab:${rootPath}`, depth: 0 } : replace ? currentEntry : { key: crypto.randomUUID(), depth: currentEntry.depth + 1 };
+  currentEntry = root
+    ? { key: `tab:${rootPath}`, depth: 0 }
+    : replace
+      ? currentEntry
+      : { key: crypto.randomUUID(), depth: currentEntry.depth + 1 };
   navigation = { ...currentEntry, kind: root && location.pathname !== rootPath ? 'tab' : replace ? 'replace' : 'push' };
   if (replace) history.replaceState({ ...history.state, musicEntry: currentEntry }, '', path);
   else history.pushState({ musicEntry: currentEntry }, '', path);
@@ -51,7 +55,8 @@ export function usePath() {
 export function useMobileEdgeGuard() {
   useEffect(() => {
     const start = (event: TouchEvent) => {
-      if (matchMedia('(max-width: 760px)').matches && event.touches.length === 1 && event.touches[0].clientX <= 24 && event.cancelable) event.preventDefault();
+      if (matchMedia('(max-width: 760px)').matches && event.touches.length === 1 && event.touches[0].clientX <= 24 && event.cancelable)
+        event.preventDefault();
     };
     // Cancelling the start reserves the whole gesture. A non-passive global
     // touchmove would unnecessarily put every ordinary scroll on the main thread.
@@ -78,14 +83,39 @@ export function query(path: string, key: string) {
   return new URLSearchParams(path.split('?')[1] ?? '').get(key) ?? '';
 }
 
-export function Link({ to, className, children, label, style, onIntent }: { to: string; className?: string; children: ReactNode; label?: string; style?: CSSProperties; onIntent?: () => void }) {
+export function Link({
+  to,
+  className,
+  children,
+  label,
+  style,
+  onIntent,
+}: {
+  to: string;
+  className?: string;
+  children: ReactNode;
+  label?: string;
+  style?: CSSProperties;
+  onIntent?: () => void;
+}) {
   const onClick = (e: MouseEvent<HTMLAnchorElement>) => {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
     e.preventDefault();
     navigate(to);
   };
   return (
-    <a href={to} draggable={false} onDragStart={event => event.preventDefault()} className={className} onClick={onClick} onPointerEnter={onIntent} onFocus={onIntent} onPointerDown={onIntent} aria-label={label} style={style}>
+    <a
+      href={to}
+      draggable={false}
+      onDragStart={(event) => event.preventDefault()}
+      className={className}
+      onClick={onClick}
+      onPointerEnter={onIntent}
+      onFocus={onIntent}
+      onPointerDown={onIntent}
+      aria-label={label}
+      style={style}
+    >
       {children}
     </a>
   );
@@ -98,12 +128,23 @@ export function useScrollMemory(element: HTMLElement | null, path: string) {
     if (!element) return;
     const key = `husic-scroll:${visit.key}`;
     let target = 0;
-    try { if (visit.kind === 'pop' || visit.kind === 'initial' || visit.kind === 'tab') target = Number(sessionStorage.getItem(key)) || 0; } catch { /* Private browsing can deny storage. */ }
+    try {
+      if (visit.kind === 'pop' || visit.kind === 'initial' || visit.kind === 'tab') target = Number(sessionStorage.getItem(key)) || 0;
+    } catch {
+      /* Private browsing can deny storage. */
+    }
     let restoring = target > 0;
     let observed: Element | null = null;
     const resize = new ResizeObserver(() => restore());
-    const mutations = new MutationObserver(() => { watch(); restore(); });
-    const finish = () => { restoring = false; resize.disconnect(); mutations.disconnect(); };
+    const mutations = new MutationObserver(() => {
+      watch();
+      restore();
+    });
+    const finish = () => {
+      restoring = false;
+      resize.disconnect();
+      mutations.disconnect();
+    };
     const restore = () => {
       if (!restoring) return;
       element.scrollTop = target;
@@ -111,14 +152,34 @@ export function useScrollMemory(element: HTMLElement | null, path: string) {
     };
     const watch = () => {
       const page = element.querySelector('[data-route-active="true"]') ?? element.firstElementChild;
-      if (page !== observed) { if (observed) resize.unobserve(observed); observed = page; if (page) resize.observe(page); }
+      if (page !== observed) {
+        if (observed) resize.unobserve(observed);
+        observed = page;
+        if (page) resize.observe(page);
+      }
     };
     element.scrollTop = target;
-    if (restoring) { mutations.observe(element, { childList: true, subtree: true }); watch(); restore(); }
+    if (restoring) {
+      mutations.observe(element, { childList: true, subtree: true });
+      watch();
+      restore();
+    }
     const abort = () => finish();
     let saveTimer: ReturnType<typeof setTimeout> | undefined;
-    const save = () => { clearTimeout(saveTimer); saveTimer = undefined; if (!restoring) try { sessionStorage.setItem(key, String(element.scrollTop)); } catch { /* No persistence still leaves navigation usable. */ } };
-    const scheduleSave = () => { clearTimeout(saveTimer); saveTimer = setTimeout(save, 180); };
+    const save = () => {
+      clearTimeout(saveTimer);
+      saveTimer = undefined;
+      if (!restoring)
+        try {
+          sessionStorage.setItem(key, String(element.scrollTop));
+        } catch {
+          /* No persistence still leaves navigation usable. */
+        }
+    };
+    const scheduleSave = () => {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(save, 180);
+    };
     const timer = setTimeout(finish, 8000);
     window.addEventListener('husic-before-navigation', save);
     window.addEventListener('husic-before-presentation-suspend', save);
@@ -127,6 +188,17 @@ export function useScrollMemory(element: HTMLElement | null, path: string) {
     element.addEventListener('wheel', abort, { passive: true });
     element.addEventListener('touchstart', abort, { passive: true });
     element.addEventListener('keydown', abort);
-    return () => { clearTimeout(saveTimer); finish(); clearTimeout(timer); window.removeEventListener('husic-before-navigation', save); window.removeEventListener('husic-before-presentation-suspend', save); window.removeEventListener('pagehide', save); element.removeEventListener('scroll', scheduleSave); element.removeEventListener('wheel', abort); element.removeEventListener('touchstart', abort); element.removeEventListener('keydown', abort); };
+    return () => {
+      clearTimeout(saveTimer);
+      finish();
+      clearTimeout(timer);
+      window.removeEventListener('husic-before-navigation', save);
+      window.removeEventListener('husic-before-presentation-suspend', save);
+      window.removeEventListener('pagehide', save);
+      element.removeEventListener('scroll', scheduleSave);
+      element.removeEventListener('wheel', abort);
+      element.removeEventListener('touchstart', abort);
+      element.removeEventListener('keydown', abort);
+    };
   }, [element, path, visit]);
 }

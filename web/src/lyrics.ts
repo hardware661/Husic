@@ -9,7 +9,10 @@ export function getLyrics(item: Item): Promise<Lyrics> {
   const key = JSON.stringify([item.songId, item.copies.map(refOf)]);
   const existing = cache.get(key);
   if (existing) return existing;
-  const request = api.lyrics(item).catch((error) => { cache.delete(key); throw error; });
+  const request = api.lyrics(item).catch((error) => {
+    cache.delete(key);
+    throw error;
+  });
   cache.set(key, request);
   if (cache.size > 24) cache.delete(cache.keys().next().value!);
   return request;

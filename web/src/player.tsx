@@ -71,8 +71,9 @@ export function usePosition(enabled = true) {
   useEffect(() => {
     if (!visible || !enabled) return;
     const update = () => {
-      const time = audio.currentTime, duration = audio.duration || 0;
-      setPosition((before) => before.time === time && before.duration === duration ? before : { time, duration });
+      const time = audio.currentTime,
+        duration = audio.duration || 0;
+      setPosition((before) => (before.time === time && before.duration === duration ? before : { time, duration }));
     };
     update();
     const events = ['timeupdate', 'durationchange', 'seeked', 'loadedmetadata', 'emptied'];
@@ -88,8 +89,14 @@ const saved: Partial<PlayerState> & { playbackOrder?: number[] } = (() => {
     // Older versions truncated the queue but kept an out-of-range index.
     const queue = Array.isArray(value.queue) ? value.queue : [];
     const index = Number.isInteger(value.index) && value.index! >= 0 && value.index! < queue.length ? value.index! : 0;
-    const order=value.playbackOrder;
-    const playbackOrder=Array.isArray(order)&&order.length===queue.length&&new Set(order).size===queue.length&&order.every(i=>Number.isInteger(i)&&i>=0&&i<queue.length)?order:[];
+    const order = value.playbackOrder;
+    const playbackOrder =
+      Array.isArray(order) &&
+      order.length === queue.length &&
+      new Set(order).size === queue.length &&
+      order.every((i) => Number.isInteger(i) && i >= 0 && i < queue.length)
+        ? order
+        : [];
     return { ...value, queue, index, playbackOrder };
   } catch {
     return {};
@@ -143,7 +150,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   // Native media time continues while the screen is off. Reconcile at media
   // and seek boundaries rather than entering JS on every progress event.
   const settleListening = useCallback(() => {
-    const record = listened.current, now = audio.currentTime, step = now - record.last;
+    const record = listened.current,
+      now = audio.currentTime,
+      step = now - record.last;
     if (record.key && step > 0 && (trackingSuspended.current || step < 2)) record.seconds += step;
     record.last = now;
   }, [audio]);
@@ -153,9 +162,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const start = Math.max(0, index - 150);
     const window = queue.slice(start, start + 300);
     try {
-      const playbackOrder=order.current.length===queue.length?order.current.filter(i=>i>=start&&i<start+window.length).map(i=>i-start):undefined;
+      const playbackOrder =
+        order.current.length === queue.length
+          ? order.current.filter((i) => i >= start && i < start + window.length).map((i) => i - start)
+          : undefined;
       localStorage.setItem('player', JSON.stringify({ queue: window, index: index - start, playbackOrder, shuffle, repeat, volume }));
-    } catch { /* storage may be full or disabled; playback still works */ }
+    } catch {
+      /* storage may be full or disabled; playback still works */
+    }
   }, [state.queue, state.index, state.shuffle, state.repeat, state.volume]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -169,12 +183,18 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const hit = prefetched.current.get(key);
       if (hit) return hit;
     }
-    const localID=localAudioID(item);
-    const pending = localID ? rejected.length?Promise.reject(new Error('这个音频文件暂时无法播放')):localAudioStream(item) : api.stream(item, rejected);
+    const localID = localAudioID(item);
+    const pending = localID
+      ? rejected.length
+        ? Promise.reject(new Error('这个音频文件暂时无法播放'))
+        : localAudioStream(item)
+      : api.stream(item, rejected);
     prefetched.current.set(key, pending);
     // Signed addresses expire; never reuse one for long.
     setTimeout(() => prefetched.current.get(key) === pending && prefetched.current.delete(key), 8 * 60 * 1000);
-    pending.catch(() => { if (prefetched.current.get(key) === pending) prefetched.current.delete(key); });
+    pending.catch(() => {
+      if (prefetched.current.get(key) === pending) prefetched.current.delete(key);
+    });
     return pending;
   }, []);
 
@@ -184,8 +204,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const { current, stream } = stateRef.current;
     const seconds = Math.round(listened.current.seconds);
     if (current && stream && seconds >= 20) {
-      const localID=localAudioID(current);
-      if(localID)void recordLocalAudioPlay(localID).catch(()=>{});
+      const localID = localAudioID(current);
+      if (localID) void recordLocalAudioPlay(localID).catch(() => {});
       else api.play(current, stream.source, stream.id, seconds).catch(() => {});
     }
     listened.current = { key: '', seconds: 0, last: 0 };
@@ -196,7 +216,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (stopIfTimerExpired() && automatic) return;
       if (automatic && !wanted.current) return;
       if (!automatic) wanted.current = autoplay;
-      if (skipTimer.current !== null) { clearTimeout(skipTimer.current); skipTimer.current = null; }
+      if (skipTimer.current !== null) {
+        clearTimeout(skipTimer.current);
+        skipTimer.current = null;
+      }
       const item = queue[index];
       if (!item) return;
       if (blind.current && keyOf(blind.current.item) !== keyOf(item)) {
@@ -218,34 +241,45 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         setState((s) => ({ ...s, stream, loading: false }));
         if (autoplay && wanted.current) await audio.play();
         if (token !== attempt.current) return;
-        failedSongs.current.clear();retryRound.current=0;
+        failedSongs.current.clear();
+        retryRound.current = 0;
         listened.current = { key: keyOf(item), seconds: 0, last: resumeAt };
       } catch (err) {
         if (token !== attempt.current) return;
         setState((s) => ({ ...s, loading: false, playing: false }));
         if (!wanted.current) return;
         failedSongs.current.add(keyOf(item));
-        toast(blind.current && !blind.current.revealed && keyOf(blind.current.item) === keyOf(item)
-          ? '这首盲听暂时放不了，已跳过' : `《${item.title}》暂时放不了，已跳过`);
+        toast(
+          blind.current && !blind.current.revealed && keyOf(blind.current.item) === keyOf(item)
+            ? '这首盲听暂时放不了，已跳过'
+            : `《${item.title}》暂时放不了，已跳过`,
+        );
         // A pending stream may fail after the user reordered the queue. Read
         // the live queue both now and when the retry fires, never its old copy.
-        const available = (s:PlayerState) => {
-          let next=nextIndex(s.queue.length,s.index,s,order.current,true);
-          for(let checked=0;next!==null&&failedSongs.current.has(keyOf(s.queue[next]))&&checked<s.queue.length;checked++)next=nextIndex(s.queue.length,next,s,order.current,true);
-          return next!==null&&!failedSongs.current.has(keyOf(s.queue[next]))?next:null;
+        const available = (s: PlayerState) => {
+          let next = nextIndex(s.queue.length, s.index, s, order.current, true);
+          for (let checked = 0; next !== null && failedSongs.current.has(keyOf(s.queue[next])) && checked < s.queue.length; checked++)
+            next = nextIndex(s.queue.length, next, s, order.current, true);
+          return next !== null && !failedSongs.current.has(keyOf(s.queue[next])) ? next : null;
         };
         if (available(stateRef.current) !== null) {
-          setState(s=>({...s,loading:true}));
+          setState((s) => ({ ...s, loading: true }));
           skipTimer.current = setTimeout(() => {
-            if(token!==attempt.current||!wanted.current)return;
-            const latest=stateRef.current,target=available(latest);
-            if(target===null)failedSongs.current.clear();
-            load(latest.queue,target??latest.index,autoplay,[],0,true);
+            if (token !== attempt.current || !wanted.current) return;
+            const latest = stateRef.current,
+              target = available(latest);
+            if (target === null) failedSongs.current.clear();
+            load(latest.queue, target ?? latest.index, autoplay, [], 0, true);
           }, 400);
         } else if (autoplay && wanted.current) {
-          setState(s=>({...s,loading:true}));
-          const delay=Math.min(30000,5000*2**retryRound.current++);
-          skipTimer.current=setTimeout(()=>{if(token!==attempt.current||!wanted.current)return;failedSongs.current.clear();const latest=stateRef.current;load(latest.queue,latest.index,true,[],0,true);},delay);
+          setState((s) => ({ ...s, loading: true }));
+          const delay = Math.min(30000, 5000 * 2 ** retryRound.current++);
+          skipTimer.current = setTimeout(() => {
+            if (token !== attempt.current || !wanted.current) return;
+            failedSongs.current.clear();
+            const latest = stateRef.current;
+            load(latest.queue, latest.index, true, [], 0, true);
+          }, delay);
         }
       }
     },
@@ -264,7 +298,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     settleListening();
     trackingSuspended.current = !(pageVisible || watchBlind);
     const onPlay = () => setState((s) => ({ ...s, playing: true }));
-    const onPause = () => { settleListening(); setState((s) => ({ ...s, playing: false })); };
+    const onPause = () => {
+      settleListening();
+      setState((s) => ({ ...s, playing: false }));
+    };
     const onTime = () => {
       settleListening();
       const now = audio.currentTime;
@@ -282,7 +319,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         }
       }
     };
-    const resetBlindPosition = () => { listened.current.last = audio.currentTime; if (blind.current) blind.current.last = audio.currentTime; };
+    const resetBlindPosition = () => {
+      listened.current.last = audio.currentTime;
+      if (blind.current) blind.current.last = audio.currentTime;
+    };
     const onEnded = () => {
       if (stopIfTimerExpired()) return;
       const s = stateRef.current;
@@ -291,8 +331,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         report();
         audio.currentTime = 0;
         listened.current = { key: s.current ? keyOf(s.current) : '', seconds: 0, last: 0 };
-        const token=attempt.current;
-        audio.play().catch(() => {if(token===attempt.current&&wanted.current)load(s.queue,s.index,true,[],0,true);});
+        const token = attempt.current;
+        audio.play().catch(() => {
+          if (token === attempt.current && wanted.current) load(s.queue, s.index, true, [], 0, true);
+        });
         return;
       }
       const next = nextIndex(s.queue.length, s.index, s, order.current, true);
@@ -329,7 +371,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const selected = items[index];
       if (!selected) return;
       const inspect = inspectionID(selected);
-      if (inspect) { navigate(`/bilibili/${encodeURIComponent(inspect)}`); return; }
+      if (inspect) {
+        navigate(`/bilibili/${encodeURIComponent(inspect)}`);
+        return;
+      }
       const playable = items.filter((item) => !inspectionID(item));
       const start = playable.indexOf(selected);
       blind.current = null;
@@ -342,13 +387,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     [load],
   );
 
-  const playBlind = useCallback((items: Item[], index: number) => {
-    const item = items[index];
-    if (!item) return;
-    play(items, index);
-    blind.current = { item, seconds: 0, last: 0, revealed: false };
-    setBlindSession({ item, seconds: 0, revealed: false });
-  }, [play]);
+  const playBlind = useCallback(
+    (items: Item[], index: number) => {
+      const item = items[index];
+      if (!item) return;
+      play(items, index);
+      blind.current = { item, seconds: 0, last: 0, revealed: false };
+      setBlindSession({ item, seconds: 0, revealed: false });
+    },
+    [play],
+  );
   const revealBlind = useCallback(() => {
     if (!blind.current) return;
     blind.current.revealed = true;
@@ -386,27 +434,46 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     };
   }, [state.index, state.queue.length]);
 
-  const pause = useCallback(()=>{
-    wanted.current=false;++attempt.current;
-    if(skipTimer.current!==null){clearTimeout(skipTimer.current);skipTimer.current=null;}
-    audio.pause();setState(v=>({...v,loading:false,playing:false}));
-  },[audio]);
+  const pause = useCallback(() => {
+    wanted.current = false;
+    ++attempt.current;
+    if (skipTimer.current !== null) {
+      clearTimeout(skipTimer.current);
+      skipTimer.current = null;
+    }
+    audio.pause();
+    setState((v) => ({ ...v, loading: false, playing: false }));
+  }, [audio]);
   pauseForTimer.current = pause;
   useSleepTimerPlayback(audio, stopIfTimerExpired);
-  const resume = useCallback(()=>{
-    const s=stateRef.current;if(!s.current||wanted.current&&(s.loading||!audio.paused))return;
-    wanted.current=true;const token=attempt.current;
-    if(!audio.src||!s.stream)load(s.queue,s.index);
-    else audio.play().catch(()=>{if(wanted.current&&token===attempt.current)load(s.queue,s.index,true,[],audio.currentTime);});
-  },[audio,load]);
-  const toggle = useCallback(()=>{
-    const s=stateRef.current;if((s.loading&&wanted.current)||!audio.paused)pause();else resume();
-  },[audio,pause,resume]);
+  const resume = useCallback(() => {
+    const s = stateRef.current;
+    if (!s.current || (wanted.current && (s.loading || !audio.paused))) return;
+    wanted.current = true;
+    const token = attempt.current;
+    if (!audio.src || !s.stream) load(s.queue, s.index);
+    else
+      audio.play().catch(() => {
+        if (wanted.current && token === attempt.current) load(s.queue, s.index, true, [], audio.currentTime);
+      });
+  }, [audio, load]);
+  const toggle = useCallback(() => {
+    const s = stateRef.current;
+    if ((s.loading && wanted.current) || !audio.paused) pause();
+    else resume();
+  }, [audio, pause, resume]);
 
-  useEffect(()=>{
-    const online=()=>{const s=stateRef.current;if(wanted.current&&s.loading&&!s.stream){failedSongs.current.clear();load(s.queue,s.index,true,[],0,true);}};
-    window.addEventListener('online',online);return()=>window.removeEventListener('online',online);
-  },[load]);
+  useEffect(() => {
+    const online = () => {
+      const s = stateRef.current;
+      if (wanted.current && s.loading && !s.stream) {
+        failedSongs.current.clear();
+        load(s.queue, s.index, true, [], 0, true);
+      }
+    };
+    window.addEventListener('online', online);
+    return () => window.removeEventListener('online', online);
+  }, [load]);
 
   const next = useCallback(() => {
     const s = stateRef.current;
@@ -425,20 +492,31 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const position = s.shuffle ? order.current.indexOf(s.index) : s.index;
     const prev = s.shuffle ? order.current[position - 1] : s.index - 1;
     if (prev !== undefined && prev >= 0) load(s.queue, prev);
-    else { settleListening(); audio.currentTime = 0; listened.current.last = 0; }
+    else {
+      settleListening();
+      audio.currentTime = 0;
+      listened.current.last = 0;
+    }
   }, [audio, load, settleListening]);
 
-  const seek = useCallback((seconds: number) => {
-    settleListening();
-    if (Number.isFinite(seconds)) audio.currentTime = Math.max(0, seconds);
-    listened.current.last = audio.currentTime;
-  }, [audio, settleListening]);
+  const seek = useCallback(
+    (seconds: number) => {
+      settleListening();
+      if (Number.isFinite(seconds)) audio.currentTime = Math.max(0, seconds);
+      listened.current.last = audio.currentTime;
+    },
+    [audio, settleListening],
+  );
 
   const jump = useCallback((index: number) => load(stateRef.current.queue, index), [load]);
 
   const playNext = useCallback((item: Item) => {
     const inspect = inspectionID(item);
-    if (inspect) { navigate(`/bilibili/${encodeURIComponent(inspect)}`); toast('先选择要听的分P'); return; }
+    if (inspect) {
+      navigate(`/bilibili/${encodeURIComponent(inspect)}`);
+      toast('先选择要听的分P');
+      return;
+    }
     // Capture once: React StrictMode can evaluate the updater twice.
     const before = [...order.current];
     setState((s) => {
@@ -453,7 +531,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const addToQueue = useCallback((item: Item) => {
     const inspect = inspectionID(item);
-    if (inspect) { navigate(`/bilibili/${encodeURIComponent(inspect)}`); toast('先选择要听的分P'); return; }
+    if (inspect) {
+      navigate(`/bilibili/${encodeURIComponent(inspect)}`);
+      toast('先选择要听的分P');
+      return;
+    }
     const before = [...order.current];
     setState((s) => {
       order.current = orderAfterAppend(before, s.queue.length) ?? shuffled(s.queue.length + 1, s.index);
@@ -474,17 +556,22 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const moveUpcoming = useCallback((from: number, to: number) => {
     // Capture once: React StrictMode can evaluate the updater twice.
-    const before=[...order.current];
-    setState(s=>{
-      const visible=s.shuffle&&before.length===s.queue.length?before:s.queue.map((_,i)=>i);
-      const current=visible.indexOf(s.index),a=visible.indexOf(from),b=visible.indexOf(to);
-      if(a<=current||b<=current||a===b)return s;
-      if(s.shuffle){
-        const next=[...visible];next.splice(b,0,...next.splice(a,1));order.current=next;
-        return {...s,queue:[...s.queue]};
+    const before = [...order.current];
+    setState((s) => {
+      const visible = s.shuffle && before.length === s.queue.length ? before : s.queue.map((_, i) => i);
+      const current = visible.indexOf(s.index),
+        a = visible.indexOf(from),
+        b = visible.indexOf(to);
+      if (a <= current || b <= current || a === b) return s;
+      if (s.shuffle) {
+        const next = [...visible];
+        next.splice(b, 0, ...next.splice(a, 1));
+        order.current = next;
+        return { ...s, queue: [...s.queue] };
       }
-      const queue=[...s.queue];queue.splice(to,0,...queue.splice(from,1));
-      return {...s,queue};
+      const queue = [...s.queue];
+      queue.splice(to, 0, ...queue.splice(from, 1));
+      return { ...s, queue };
     });
   }, []);
 
@@ -493,25 +580,78 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, shuffle: on }));
   }, []);
 
-  const cycleRepeat = useCallback(
-    () => setState((s) => ({ ...s, repeat: s.repeat === 'all' ? 'one' : 'all' })),
-    [],
-  );
+  const cycleRepeat = useCallback(() => setState((s) => ({ ...s, repeat: s.repeat === 'all' ? 'one' : 'all' })), []);
   const setVolume = useCallback((v: number) => setState((s) => ({ ...s, volume: v, muted: false })), []);
   const toggleMute = useCallback(() => setState((s) => ({ ...s, muted: !s.muted })), []);
 
   const concealed = Boolean(blindSession && !blindSession.revealed && state.current && keyOf(blindSession.item) === keyOf(state.current));
-  const presentation = useMemo(() => concealed && state.current
-    ? { ...state.current, title: '先听，再看是谁', artists: ['盲听中 · 听满 8 秒揭晓'], album: '', cover: '' }
-    : state.current, [concealed, state.current]);
+  const presentation = useMemo(
+    () =>
+      concealed && state.current
+        ? { ...state.current, title: '先听，再看是谁', artists: ['盲听中 · 听满 8 秒揭晓'], album: '', cover: '' }
+        : state.current,
+    [concealed, state.current],
+  );
   useMediaSession({ ...state, current: presentation }, audio, { toggle, pause, resume, next, previous, seek });
   useDesktopLyrics(state.current, audio, concealed);
-  const playbackOrder = useMemo(() => state.shuffle && order.current.length === state.queue.length
-    ? [...order.current] : state.queue.map((_, index) => index), [state.queue, state.index, state.shuffle]);
+  const playbackOrder = useMemo(
+    () => (state.shuffle && order.current.length === state.queue.length ? [...order.current] : state.queue.map((_, index) => index)),
+    [state.queue, state.index, state.shuffle],
+  );
 
   const value = useMemo<Player>(
-    () => ({ ...state, playbackOrder, presentation, blindSession, playBlind, revealBlind, audio, radio, play, playRadio, toggle, pause, next, previous, seek, jump, playNext, addToQueue, removeAt, moveUpcoming, setShuffle, cycleRepeat, setVolume, toggleMute }),
-    [state, playbackOrder, presentation, blindSession, playBlind, revealBlind, audio, radio, play, playRadio, toggle, pause, next, previous, seek, jump, playNext, addToQueue, removeAt, moveUpcoming, setShuffle, cycleRepeat, setVolume, toggleMute],
+    () => ({
+      ...state,
+      playbackOrder,
+      presentation,
+      blindSession,
+      playBlind,
+      revealBlind,
+      audio,
+      radio,
+      play,
+      playRadio,
+      toggle,
+      pause,
+      next,
+      previous,
+      seek,
+      jump,
+      playNext,
+      addToQueue,
+      removeAt,
+      moveUpcoming,
+      setShuffle,
+      cycleRepeat,
+      setVolume,
+      toggleMute,
+    }),
+    [
+      state,
+      playbackOrder,
+      presentation,
+      blindSession,
+      playBlind,
+      revealBlind,
+      audio,
+      radio,
+      play,
+      playRadio,
+      toggle,
+      pause,
+      next,
+      previous,
+      seek,
+      jump,
+      playNext,
+      addToQueue,
+      removeAt,
+      moveUpcoming,
+      setShuffle,
+      cycleRepeat,
+      setVolume,
+      toggleMute,
+    ],
   );
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }
@@ -525,7 +665,7 @@ function nextIndex(length: number, index: number, s: Pick<PlayerState, 'shuffle'
 function useMediaSession(
   state: PlayerState,
   audio: HTMLAudioElement,
-  actions: { toggle: () => void; pause:()=>void;resume:()=>void; next: () => void; previous: () => void; seek: (s: number) => void },
+  actions: { toggle: () => void; pause: () => void; resume: () => void; next: () => void; previous: () => void; seek: (s: number) => void },
 ) {
   const { current, playing, loading } = state;
   useEffect(() => {
@@ -564,7 +704,11 @@ function useMediaSession(
     const sync = () => {
       if (!('mediaSession' in navigator) || !audio.duration || !Number.isFinite(audio.duration)) return;
       try {
-        navigator.mediaSession.setPositionState({ duration: audio.duration, position: Math.min(audio.currentTime, audio.duration), playbackRate: 1 });
+        navigator.mediaSession.setPositionState({
+          duration: audio.duration,
+          position: Math.min(audio.currentTime, audio.duration),
+          playbackRate: 1,
+        });
       } catch {
         /* ignore */
       }
