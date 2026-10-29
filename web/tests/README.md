@@ -1,6 +1,6 @@
 # 前端浏览器回归
 
-检查使用隔离的浏览器上下文、演示数据和有效的静音 WAV，不连接个人音乐账号。需要环境已有 Python Playwright 和 Chromium；应用的 Node 依赖仍安装在 `web/` 内。
+检查使用隔离的浏览器上下文、演示数据和有效的静音 WAV，不连接个人音乐账号。需要 Python Playwright 和 Chromium（`pip install playwright && playwright install chromium`）；应用的 Node 依赖仍安装在 `web/` 内。
 
 先在仓库根目录启动前端：
 
@@ -19,6 +19,7 @@ HUSIC_TEST_URL=http://127.0.0.1:5190 python3 -m unittest discover -s web/tests -
 | 文件 | 覆盖内容 |
 | --- | --- |
 | `test_controls.py` | 歌单改名、菜单、导航与单曲下载 |
+| `test_queue.py` | 随机播放下的插队和删除、循环模式、歌单切换 |
 | `test_bulk_download.py` | 批量下载、去重、取消、存储空间与桌面窗框避让 |
 | `test_mobile.py` | 手机布局、播放页、盲听与定时停止 |
 | `test_foreground.py`、`test_touch_ui.py` | 触摸手势、选字、输入、缓存与滚动恢复 |

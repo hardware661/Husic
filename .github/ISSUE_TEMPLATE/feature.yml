@@ -1,0 +1,9 @@
+name: 想要新功能
+description: 有个想法
+body:
+  - type: textarea
+    attributes:
+      label: 想做到什么
+      description: 说说你的使用场景，比直接说怎么实现更有帮助
+    validations:
+      required: true

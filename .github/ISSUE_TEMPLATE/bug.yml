@@ -1,0 +1,22 @@
+name: 问题反馈
+description: 有地方不对劲
+body:
+  - type: textarea
+    attributes:
+      label: 发生了什么
+      description: 你做了什么、看到了什么、本来以为会怎样
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: 在哪里用
+      description: 例如：电脑 Chrome、iPhone 网页、Windows 客户端 0.2.0
+  - type: input
+    attributes:
+      label: 怎么部署的
+      description: 例如：docker compose（SQLite）、源码 + PostgreSQL
+  - type: textarea
+    attributes:
+      label: 服务端日志
+      description: 有报错的话贴相关几行。请先删掉 Cookie、密钥和数据库地址。
+      render: text
