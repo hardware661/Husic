@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  if (window !== window.top || location.origin !== __MUSIC_ORIGIN__ || !window.chrome?.webview) return;
+  if (window !== window.top || location.origin !== __HUSIC_ORIGIN__ || !window.chrome?.webview) return;
   const bridge = window.chrome.webview;
   const handlers = new Map();
   const session = navigator.mediaSession;
@@ -13,7 +13,7 @@
     if (identity === previousArtwork) return;
     previousArtwork = identity;
     const generation = ++artworkGeneration;
-    bridge.postMessage({ type: 'music-artwork', title, dataUrl: null });
+    bridge.postMessage({ type: 'husic-artwork', title, dataUrl: null });
     if (!src || !/^https:\/\//.test(src)) return;
     const image = new Image();
     image.crossOrigin = 'anonymous';
@@ -25,7 +25,7 @@
         const edge = Math.min(image.naturalWidth, image.naturalHeight);
         context.drawImage(image, (image.naturalWidth - edge) / 2, (image.naturalHeight - edge) / 2, edge, edge, 0, 0, 64, 64);
         const dataUrl = canvas.toDataURL('image/png');
-        if (dataUrl.length < 50000) bridge.postMessage({ type: 'music-artwork', title, dataUrl });
+        if (dataUrl.length < 50000) bridge.postMessage({ type: 'husic-artwork', title, dataUrl });
       } catch { /* A CDN without CORS keeps the brand fallback; no native URL fetch. */ }
     };
     image.src = src;
@@ -33,7 +33,7 @@
   const publish = () => {
     const metadata = session?.metadata;
     const state = {
-      type: 'music-status',
+      type: 'husic-status',
       title: String(metadata?.title || '').slice(0, 160),
       artist: String(metadata?.artist || '').slice(0, 160),
       playing: session?.playbackState === 'playing',
@@ -65,11 +65,11 @@
   }
   bridge.addEventListener('message', event => {
     const value = event.data;
-    if (value?.type !== 'music-desktop-control') return;
+    if (value?.type !== 'husic-desktop-control') return;
     let action = value.action;
     if (action === 'toggle') action = session?.playbackState === 'playing' ? 'pause' : 'play';
     if (!['play', 'pause', 'previoustrack', 'nexttrack'].includes(action)) return;
-    // The existing Music play/pause handlers both toggle; duplicate requests
+    // The existing Husic play/pause handlers both toggle; duplicate requests
     // must not turn a requested pause back into play.
     if (action === 'pause' && session?.playbackState !== 'playing') return;
     if (action === 'play' && session?.playbackState === 'playing') return;
@@ -92,6 +92,6 @@
   };
   if (document.documentElement) observeTheme(); else document.addEventListener('DOMContentLoaded', observeTheme, { once: true });
   // Only changed, bounded playback metadata is sent. No cookie/storage/API
-  // data is read, and blind-listening uses Music's concealed MediaMetadata.
+  // data is read, and blind-listening uses Husic's concealed MediaMetadata.
   window.setInterval(publish, 1000);
 })();

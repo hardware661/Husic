@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"music/internal/catalog"
-	"music/internal/lyrics"
-	"music/internal/resolve"
-	"music/internal/source"
-	"music/internal/store"
+	"github.com/hardware661/husic/internal/catalog"
+	"github.com/hardware661/husic/internal/lyrics"
+	"github.com/hardware661/husic/internal/resolve"
+	"github.com/hardware661/husic/internal/source"
+	"github.com/hardware661/husic/internal/store"
 )
 
 func (s *Server) search(w http.ResponseWriter, r *http.Request) {

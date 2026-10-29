@@ -10,7 +10,7 @@ using System.Windows.Forms;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
-namespace Hardware.Music
+namespace Husic.Desktop
 {
     internal static class DesktopApplication
     {
@@ -48,7 +48,7 @@ namespace Hardware.Music
         internal bool MediaReady { get; private set; }
         internal string SongTitle { get; private set; }
         internal string SongArtist { get; private set; }
-        internal MusicTrayMenu TrayMenu { get; private set; }
+        internal TrayMenu TrayMenu { get; private set; }
         internal DesktopLyrics LyricsWindow { get; private set; }
         internal bool TrayVisible { get { return tray.Visible; } }
         internal bool ErrorVisible { get { return messagePanel.Visible && retryButton.Visible; } }
@@ -75,7 +75,7 @@ namespace Hardware.Music
             Options = options;
             Directory.CreateDirectory(options.Root);
             Text = "Husic";
-            Icon = new Icon(new MemoryStream(Resources.Bytes("Music.Brand.ico")));
+            Icon = new Icon(new MemoryStream(Resources.Bytes("Husic.Brand.ico")));
             AutoScaleMode = AutoScaleMode.Dpi;
             MinimumSize = new Size(800, 600);
             StartPosition = FormStartPosition.Manual;
@@ -86,7 +86,7 @@ namespace Hardware.Music
             Browser = new WebView2 { Dock = DockStyle.Fill, DefaultBackgroundColor = BackColor, AllowExternalDrop = true };
             Controls.Add(Browser);
 
-            TrayMenu = new MusicTrayMenu(TrayCommand);
+            TrayMenu = new TrayMenu(TrayCommand);
             tray = new NotifyIcon { Icon = Icon, Text = "Husic", ContextMenuStrip = TrayMenu, Visible = true };
             TrayMenu.Closed += delegate { trayMenuClosedAt = DateTime.UtcNow; };
             tray.MouseClick += delegate(object sender, MouseEventArgs e) {
@@ -96,7 +96,7 @@ namespace Hardware.Music
             };
 
             messagePanel = new Panel { Dock = DockStyle.Fill, BackColor = BackColor };
-            loadingMark = new PictureBox { Image = Bitmap.FromStream(new MemoryStream(Resources.Bytes("Music.Brand.png"))), SizeMode = PictureBoxSizeMode.Zoom };
+            loadingMark = new PictureBox { Image = Bitmap.FromStream(new MemoryStream(Resources.Bytes("Husic.Brand.png"))), SizeMode = PictureBoxSizeMode.Zoom };
             messageTitle = new Label { Text="Husic",AutoSize=false,TextAlign=ContentAlignment.MiddleCenter,Font=new Font("Microsoft YaHei UI",22,FontStyle.Bold),ForeColor=Color.FromArgb(24,24,24) };
             messageDetail = new Label { Visible=false,AutoSize=false };
             retryButton = new Button { Text="重试",AccessibleName="重新连接 Husic",FlatStyle=FlatStyle.Flat,BackColor=Color.White,Visible=false };
@@ -196,12 +196,12 @@ namespace Hardware.Music
                 core.ProcessFailed += delegate { ShowMessage("播放器需要重新连接", "已保存的音乐库和账号不会删除，重新连接就能继续。", true); };
                 if (Options.Test && Options.FixtureDirectory != null)
                     core.SetVirtualHostNameToFolderMapping(new Uri(Options.Origin).Host, Options.FixtureDirectory, CoreWebView2HostResourceAccessKind.DenyCors);
-                string bridge = Resources.Text("Music.DesktopBridge.js").Replace("__MUSIC_ORIGIN__", new JavaScriptSerializer().Serialize(Options.Origin));
+                string bridge = Resources.Text("Husic.DesktopBridge.js").Replace("__HUSIC_ORIGIN__", new JavaScriptSerializer().Serialize(Options.Origin));
                 await core.AddScriptToExecuteOnDocumentCreatedAsync(bridge);
-                string chrome = Resources.Text("Music.DesktopChrome.js")
-                    .Replace("__MUSIC_ORIGIN__", new JavaScriptSerializer().Serialize(Options.Origin))
-                    .Replace("__MUSIC_LOGIN_ORIGIN__", new JavaScriptSerializer().Serialize(Options.LoginOrigin))
-                    .Replace("__MUSIC_DESKTOP_CSS__", new JavaScriptSerializer().Serialize(Resources.Text("Music.DesktopChrome.css")));
+                string chrome = Resources.Text("Husic.DesktopChrome.js")
+                    .Replace("__HUSIC_ORIGIN__", new JavaScriptSerializer().Serialize(Options.Origin))
+                    .Replace("__HUSIC_LOGIN_ORIGIN__", new JavaScriptSerializer().Serialize(Options.LoginOrigin))
+                    .Replace("__HUSIC_DESKTOP_CSS__", new JavaScriptSerializer().Serialize(Resources.Text("Husic.DesktopChrome.css")));
                 await core.AddScriptToExecuteOnDocumentCreatedAsync(chrome);
                 Ready.TrySetResult(true);
                 NavigateHome();
@@ -396,11 +396,11 @@ namespace Hardware.Music
                 bool musicOrigin = NavigationPolicy.OriginIs(e.Source, Options.Origin);
                 if (raw.Length <= 4096 && ReceiveChromeMessage(data, musicOrigin)) return;
                 if (!musicOrigin) return;
-                if ((string)type == "music-artwork") { ReceiveArtwork(data); return; }
+                if ((string)type == "husic-artwork") { ReceiveArtwork(data); return; }
                 if (raw.Length > 4096) return;
                 if ((string)type == "open-youtube-settings") { OpenYouTubeSettings(); return; }
-                if ((string)type == "music-lyrics") { ReceiveLyrics(data); return; }
-                if ((string)type != "music-status") return;
+                if ((string)type == "husic-lyrics") { ReceiveLyrics(data); return; }
+                if ((string)type != "husic-status") return;
                 object value;
                 Playing = data.TryGetValue("playing", out value) && value is bool && (bool)value;
                 MediaReady = data.TryGetValue("ready", out value) && value is bool && (bool)value;
@@ -482,7 +482,7 @@ namespace Hardware.Music
                 RestoreWindow();
                 if (Browser.CoreWebView2 == null) return;
                 if (Browser.Source != null && NavigationPolicy.OriginIs(Browser.Source.AbsoluteUri, Options.Origin) && ShellReady)
-                    Browser.CoreWebView2.PostWebMessageAsJson("{\"type\":\"music-desktop-open-settings\"}");
+                    Browser.CoreWebView2.PostWebMessageAsJson("{\"type\":\"husic-desktop-open-settings\"}");
                 else Browser.CoreWebView2.Navigate(Options.Origin + "/settings");
             }
             else await Media(command);
@@ -492,7 +492,7 @@ namespace Hardware.Music
         {
             if (Browser.CoreWebView2 == null || Browser.Source == null || !NavigationPolicy.OriginIs(Browser.Source.AbsoluteUri, Options.Origin)) return Task.FromResult(false);
             if (action != "toggle" && action != "play" && action != "pause" && action != "nexttrack" && action != "previoustrack") return Task.FromResult(false);
-            Browser.CoreWebView2.PostWebMessageAsJson(new JavaScriptSerializer().Serialize(new { type = "music-desktop-control", action = action }));
+            Browser.CoreWebView2.PostWebMessageAsJson(new JavaScriptSerializer().Serialize(new { type = "husic-desktop-control", action = action }));
             return Task.FromResult(true);
         }
 

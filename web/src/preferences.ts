@@ -9,12 +9,12 @@ export const palettes = [
   { id: 'ocean', name: '海盐', color: '#527e9b' },
 ] as const;
 export type Preferences = { theme: 'system' | 'light' | 'dark'; motion: 'system' | 'reduced'; accent: string; backgroundStrength: number; backgroundBlur: number };
-const key = 'music-preferences-v1';
+const key = 'husic-preferences-v1';
 const listeners = new Set<() => void>();
 let value: Preferences = { theme: 'system', motion: 'system', accent: '', backgroundStrength: 20, backgroundBlur: 0 };
 export const validColor = (v: unknown): v is string => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
 try {
-  const saved = JSON.parse(localStorage.getItem(key) || '{}');
+  const saved = JSON.parse(localStorage.getItem(key) || localStorage.getItem('music-preferences-v1') || '{}');
   if (['system', 'light', 'dark'].includes(saved.theme)) value.theme = saved.theme;
   if (['system', 'reduced'].includes(saved.motion)) value.motion = saved.motion;
   if (validColor(saved.accent)) value.accent = saved.accent;
@@ -49,7 +49,7 @@ function apply() {
   } else tinted.forEach(name=>root.style.removeProperty(name));
   root.style.setProperty('--background-strength', String(value.backgroundStrength / 100));
   root.style.setProperty('--background-blur', `${value.backgroundBlur}px`);
-  window.dispatchEvent(new Event('music-preferences-change'));
+  window.dispatchEvent(new Event('husic-preferences-change'));
 }
 export function setPreference<K extends keyof Preferences>(name: K, next: Preferences[K]) {
   if (name === 'accent' && next !== '' && !validColor(next)) return;

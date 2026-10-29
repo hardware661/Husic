@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"music/internal/source"
+	"github.com/hardware661/husic/internal/source"
 )
 
 type suggestionProvider struct {

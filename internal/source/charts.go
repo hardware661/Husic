@@ -17,7 +17,7 @@ type Chart struct {
 	Short  string `json:"short"`
 }
 
-// Charts lists the rankings Music shows, grouped by platform.
+// Charts lists the rankings Husic shows, grouped by platform.
 var Charts = []Chart{
 	{"netease", "3778678", "网易云热歌榜", "热歌"}, {"netease", "3779629", "网易云新歌榜", "新歌"},
 	{"netease", "19723756", "网易云飙升榜", "飙升"}, {"netease", "2884035", "网易云原创榜", "原创"},

@@ -10,7 +10,7 @@ let navigation = { ...currentEntry, kind: 'initial' };
 history.replaceState({ ...history.state, musicEntry: currentEntry }, '');
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 window.addEventListener('popstate', () => {
-  window.dispatchEvent(new Event('music-before-navigation'));
+  window.dispatchEvent(new Event('husic-before-navigation'));
   currentEntry = history.state?.musicEntry || entry();
   navigation = { ...currentEntry, kind: 'pop' };
   notify();
@@ -23,7 +23,7 @@ function subscribe(listener: () => void) {
 
 export function navigate(path: string, replace = false) {
   if (path === location.pathname + location.search) return;
-  window.dispatchEvent(new Event('music-before-navigation'));
+  window.dispatchEvent(new Event('husic-before-navigation'));
   // Phone tabs are peers. Desktop links keep normal browser/Alt+Left history.
   const rootPath = path.split('?')[0];
   const root = matchMedia('(max-width: 760px)').matches && ['/', '/discover', '/charts', '/library', '/settings'].includes(rootPath);
@@ -96,7 +96,7 @@ export function useScrollMemory(element: HTMLElement | null, path: string) {
   const visit = useSyncExternalStore(subscribe, () => navigation);
   useLayoutEffect(() => {
     if (!element) return;
-    const key = `music-scroll:${visit.key}`;
+    const key = `husic-scroll:${visit.key}`;
     let target = 0;
     try { if (visit.kind === 'pop' || visit.kind === 'initial' || visit.kind === 'tab') target = Number(sessionStorage.getItem(key)) || 0; } catch { /* Private browsing can deny storage. */ }
     let restoring = target > 0;
@@ -120,13 +120,13 @@ export function useScrollMemory(element: HTMLElement | null, path: string) {
     const save = () => { clearTimeout(saveTimer); saveTimer = undefined; if (!restoring) try { sessionStorage.setItem(key, String(element.scrollTop)); } catch { /* No persistence still leaves navigation usable. */ } };
     const scheduleSave = () => { clearTimeout(saveTimer); saveTimer = setTimeout(save, 180); };
     const timer = setTimeout(finish, 8000);
-    window.addEventListener('music-before-navigation', save);
-    window.addEventListener('music-before-presentation-suspend', save);
+    window.addEventListener('husic-before-navigation', save);
+    window.addEventListener('husic-before-presentation-suspend', save);
     window.addEventListener('pagehide', save);
     element.addEventListener('scroll', scheduleSave, { passive: true });
     element.addEventListener('wheel', abort, { passive: true });
     element.addEventListener('touchstart', abort, { passive: true });
     element.addEventListener('keydown', abort);
-    return () => { clearTimeout(saveTimer); finish(); clearTimeout(timer); window.removeEventListener('music-before-navigation', save); window.removeEventListener('music-before-presentation-suspend', save); window.removeEventListener('pagehide', save); element.removeEventListener('scroll', scheduleSave); element.removeEventListener('wheel', abort); element.removeEventListener('touchstart', abort); element.removeEventListener('keydown', abort); };
+    return () => { clearTimeout(saveTimer); finish(); clearTimeout(timer); window.removeEventListener('husic-before-navigation', save); window.removeEventListener('husic-before-presentation-suspend', save); window.removeEventListener('pagehide', save); element.removeEventListener('scroll', scheduleSave); element.removeEventListener('wheel', abort); element.removeEventListener('touchstart', abort); element.removeEventListener('keydown', abort); };
   }, [element, path, visit]);
 }

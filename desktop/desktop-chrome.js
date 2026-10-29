@@ -1,11 +1,11 @@
 (() => {
   'use strict';
-  const musicOrigin = __MUSIC_ORIGIN__;
-  const loginOrigin = __MUSIC_LOGIN_ORIGIN__;
+  const musicOrigin = __HUSIC_ORIGIN__;
+  const loginOrigin = __HUSIC_LOGIN_ORIGIN__;
   if (window !== window.top || !window.chrome?.webview || ![musicOrigin, loginOrigin].filter(Boolean).includes(location.origin)) return;
   const bridge = window.chrome.webview;
   const isMusic = location.origin === musicOrigin;
-  const css = __MUSIC_DESKTOP_CSS__;
+  const css = __HUSIC_DESKTOP_CSS__;
   const icons = {
     minimize: '<path d="M3 9.5h10"/>',
     maximize: '<rect x="3.5" y="3.5" width="9" height="9" rx=".6"/>',
@@ -35,7 +35,7 @@
       hitRegions.dataset.maximized = String(state.maximized);
     }
     if (!section?.isConnected) return;
-    for (const input of section.querySelectorAll('input[name="music-desktop-close"]')) {
+    for (const input of section.querySelectorAll('input[name="husic-desktop-close"]')) {
       input.checked = (input.value === 'tray') === state.closeToTray;
       input.closest('label').classList.toggle('is-selected', input.checked);
     }
@@ -79,13 +79,13 @@
   function installSettings() {
     if (!isMusic) return;
     const page = document.querySelector('.settings-page');
-    if (!page || page.querySelector('#music-desktop-settings')) return;
+    if (!page || page.querySelector('#husic-desktop-settings')) return;
     section = document.createElement('section');
-    section.id = 'music-desktop-settings';
+    section.id = 'husic-desktop-settings';
     section.className = 'settings-section desktop-settings';
-    section.setAttribute('aria-labelledby', 'music-desktop-heading');
+    section.setAttribute('aria-labelledby', 'husic-desktop-heading');
     section.innerHTML = `
-      <h2 id="music-desktop-heading">桌面体验</h2>
+      <h2 id="husic-desktop-heading">桌面体验</h2>
       <div class="settings-group">
         <div class="setting-row">
           <span class="setting-symbol">${svg('lyrics', 20)}</span>
@@ -130,8 +130,8 @@
           <span class="setting-symbol">${svg('window', 20)}</span>
           <div class="setting-copy"><strong>关闭窗口时</strong></div>
           <div class="setting-control"><fieldset class="desktop-close-choice" aria-label="关闭窗口时">
-            <label><input type="radio" name="music-desktop-close" value="tray"><span>收进托盘</span></label>
-            <label><input type="radio" name="music-desktop-close" value="exit"><span>退出 Husic</span></label>
+            <label><input type="radio" name="husic-desktop-close" value="tray"><span>收进托盘</span></label>
+            <label><input type="radio" name="husic-desktop-close" value="exit"><span>退出 Husic</span></label>
           </fieldset></div>
         </div>
         <div class="setting-row">
@@ -168,7 +168,7 @@
         const key=input.dataset.lyricPref;
         send('desktop-settings-change',{name:key,value:['number','range'].includes(input.type)?Number(input.value):input.value});
       }
-      if (event.isTrusted && input instanceof HTMLInputElement && input.name === 'music-desktop-close') {
+      if (event.isTrusted && input instanceof HTMLInputElement && input.name === 'husic-desktop-close') {
         send('desktop-settings-change', { name: 'closeToTray', value: input.value === 'tray' });
       }
     });
@@ -226,13 +226,13 @@
   }
 
   function start() {
-    if (!document.body || document.getElementById('music-window-controls')) return;
-    document.documentElement.dataset.musicDesktop = 'true';
-    const style = document.createElement('style'); style.id = 'music-desktop-style'; style.textContent = css; document.head.append(style);
-    hitRegions = document.createElement('div'); hitRegions.className = 'music-window-hit-regions'; hitRegions.setAttribute('aria-hidden', 'true');
-    hitRegions.innerHTML = '<div class="music-window-drag"></div>' + ['left', 'right', 'top', 'bottom', 'top-left', 'top-right', 'bottom-left', 'bottom-right'].map(edge => `<div class="music-window-edge" data-edge="${edge}"></div>`).join('');
+    if (!document.body || document.getElementById('husic-window-controls')) return;
+    document.documentElement.dataset.husicDesktop = 'true';
+    const style = document.createElement('style'); style.id = 'husic-desktop-style'; style.textContent = css; document.head.append(style);
+    hitRegions = document.createElement('div'); hitRegions.className = 'husic-window-hit-regions'; hitRegions.setAttribute('aria-hidden', 'true');
+    hitRegions.innerHTML = '<div class="husic-window-drag"></div>' + ['left', 'right', 'top', 'bottom', 'top-left', 'top-right', 'bottom-left', 'bottom-right'].map(edge => `<div class="husic-window-edge" data-edge="${edge}"></div>`).join('');
     document.body.append(hitRegions);
-    controls = document.createElement('div'); controls.id = 'music-window-controls'; controls.className = 'music-window-controls'; controls.setAttribute('role', 'group'); controls.setAttribute('aria-label', '窗口操作');
+    controls = document.createElement('div'); controls.id = 'husic-window-controls'; controls.className = 'husic-window-controls'; controls.setAttribute('role', 'group'); controls.setAttribute('aria-label', '窗口操作');
     controls.innerHTML = ['minimize', 'maximize', 'close'].map((action, index) => {
       const label = ['最小化', '最大化', '关闭窗口'][index];
       return `<button type="button" data-command="${action}" aria-label="${label}" data-label="${label}">${svg(action)}</button>`;
@@ -249,14 +249,14 @@
     document.addEventListener('pointerdown', event => {
       if (!event.isTrusted || event.button !== 0 || !event.isPrimary || !(event.target instanceof Element)) return;
       const target = event.target;
-      const edge = target.closest('.music-window-edge');
-      const caption = target.closest('.music-window-drag, .brand, .page-header');
+      const edge = target.closest('.husic-window-edge');
+      const caption = target.closest('.husic-window-drag, .brand, .page-header');
       if (!edge && (!caption || target.closest('button, a, input, select, textarea, [role="button"], .page-actions'))) return;
       event.preventDefault();
       send('desktop-window-command', { action: edge ? `resize-${edge.dataset.edge}` : 'drag' });
     }, true);
     document.addEventListener('dblclick', event => {
-      if (event.isTrusted && event.button === 0 && event.target instanceof Element && event.target.closest('.music-window-drag, .brand, .page-header') && !event.target.closest('button, a, input, .page-actions')) {
+      if (event.isTrusted && event.button === 0 && event.target instanceof Element && event.target.closest('.husic-window-drag, .brand, .page-header') && !event.target.closest('button, a, input, .page-actions')) {
         event.preventDefault(); send('desktop-window-command', { action: 'maximize' });
       }
     }, true);
@@ -269,12 +269,12 @@
   }
 
   bridge.addEventListener('message', event => {
-    if (event.data?.type === 'music-desktop-state') {
+    if (event.data?.type === 'husic-desktop-state') {
       const data = event.data;
       if (typeof data.closeToTray !== 'boolean' || typeof data.topmost !== 'boolean' || ![.85, 1, 1.15, 1.25].includes(data.zoom)) return;
       state = data; renderState();
     }
-    if (event.data?.type === 'music-desktop-open-settings' && isMusic) {
+    if (event.data?.type === 'husic-desktop-open-settings' && isMusic) {
       goToSettings = true;
       const link = document.querySelector('.side-settings a[href="/settings"]');
       if (location.pathname !== '/settings' && link) link.click();

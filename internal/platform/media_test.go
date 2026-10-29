@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"music/internal/source"
+	"github.com/hardware661/husic/internal/source"
 )
 
 func TestBilibiliPartCannotSilentlyBecomeP1(t *testing.T) {

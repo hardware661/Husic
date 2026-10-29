@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hardware661/husic/internal/accounts"
 	"github.com/skip2/go-qrcode"
-	"music/internal/accounts"
 )
 
 // These routes remain behind the existing gateway. A cross-site page cannot
@@ -30,12 +30,12 @@ func (s *Server) accountRoutes(mux *http.ServeMux) {
 					scheme = "https"
 				}
 				if err != nil || parsed.Host != r.Host || parsed.Scheme != scheme {
-					fail(w, 403, "请从 Music 设置中操作")
+					fail(w, 403, "请从 Husic 设置中操作")
 					return
 				}
 			}
 			if r.Header.Get("Sec-Fetch-Site") == "cross-site" || !strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
-				fail(w, 403, "请从 Music 设置中操作")
+				fail(w, 403, "请从 Husic 设置中操作")
 				return
 			}
 			handler(w, r)

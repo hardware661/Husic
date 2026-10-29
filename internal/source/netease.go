@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"strings"
 
-	"music/internal/netease"
+	"github.com/hardware661/husic/internal/netease"
 )
 
-// NetEase plays through the owner's account; it must reach NetEase from a
+// NetEase plays through the connected account; it must reach NetEase from a
 // mainland exit or most of the catalogue is region-blocked.
 type NetEase struct {
 	Client *netease.Client

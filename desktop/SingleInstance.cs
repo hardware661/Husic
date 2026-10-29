@@ -9,7 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Text;
 
-namespace Hardware.Music
+namespace Husic.Desktop
 {
     internal sealed class SingleInstance : IDisposable
     {

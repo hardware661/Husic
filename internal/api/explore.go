@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"music/internal/netease"
-	"music/internal/source"
+	"github.com/hardware661/husic/internal/netease"
+	"github.com/hardware661/husic/internal/source"
 )
 
 // pick is a recommended song with the reason it was picked.
@@ -190,7 +190,7 @@ func (s *Server) warmOnce(ctx context.Context) {
 	wg.Wait()
 }
 
-// discover gathers several kinds of songs the owner has not met yet. Everything
+// discover gathers several kinds of songs the listener has not met yet. Everything
 // comes from warm pools; every request reshuffles them, so "换一批" works.
 func (s *Server) discover(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()

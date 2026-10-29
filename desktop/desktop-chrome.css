@@ -3,55 +3,55 @@
 .desktop-lyrics-disclosure.is-open { grid-template-rows: 1fr; visibility: visible; opacity: 1; }
 .desktop-lyrics-options { min-height: 0; overflow: hidden; }
 html[data-motion="reduced"] .desktop-lyrics-disclosure { transition: none; }
-html[data-music-desktop] body { -webkit-user-select: none; user-select: none; cursor: default; }
-html[data-music-desktop] .content { scrollbar-width: none; }
-html[data-music-desktop] .content::-webkit-scrollbar { display: none; width: 0; }
-html[data-music-desktop] :is(input:not([type="range"]):not([type="radio"]):not([type="checkbox"]):not([type="color"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="hidden"]), textarea, [contenteditable="true"]) { -webkit-user-select: text; user-select: text; cursor: text; }
-.music-window-hit-regions { position: fixed; z-index: 99; inset: 0; width: auto; height: auto; margin: 0; padding: 0; border: 0; overflow: visible; background: transparent; pointer-events: none; }
-.music-window-hit-regions::backdrop { background: transparent; pointer-events: none; }
-.music-window-drag { position: absolute; inset: 0 144px auto 0; height: 22px; pointer-events: auto; }
-.music-window-edge { position: absolute; pointer-events: auto; }
-.music-window-edge[data-edge="left"] { inset: 10px auto 10px 0; width: 6px; cursor: ew-resize; }
-.music-window-edge[data-edge="right"] { inset: 10px 0 10px auto; width: 6px; cursor: ew-resize; }
-.music-window-edge[data-edge="top"] { inset: 0 10px auto; height: 6px; cursor: ns-resize; }
-.music-window-edge[data-edge="bottom"] { inset: auto 10px 0; height: 6px; cursor: ns-resize; }
-.music-window-edge[data-edge="top-left"] { inset: 0 auto auto 0; width: 10px; height: 10px; cursor: nwse-resize; }
-.music-window-edge[data-edge="top-right"] { inset: 0 0 auto auto; width: 10px; height: 10px; cursor: nesw-resize; }
-.music-window-edge[data-edge="bottom-left"] { inset: auto auto 0 0; width: 10px; height: 10px; cursor: nesw-resize; }
-.music-window-edge[data-edge="bottom-right"] { inset: auto 0 0 auto; width: 10px; height: 10px; cursor: nwse-resize; }
-.music-window-hit-regions[data-maximized="true"] .music-window-edge { display: none; }
-.music-window-controls {
+html[data-husic-desktop] body { -webkit-user-select: none; user-select: none; cursor: default; }
+html[data-husic-desktop] .content { scrollbar-width: none; }
+html[data-husic-desktop] .content::-webkit-scrollbar { display: none; width: 0; }
+html[data-husic-desktop] :is(input:not([type="range"]):not([type="radio"]):not([type="checkbox"]):not([type="color"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="hidden"]), textarea, [contenteditable="true"]) { -webkit-user-select: text; user-select: text; cursor: text; }
+.husic-window-hit-regions { position: fixed; z-index: 99; inset: 0; width: auto; height: auto; margin: 0; padding: 0; border: 0; overflow: visible; background: transparent; pointer-events: none; }
+.husic-window-hit-regions::backdrop { background: transparent; pointer-events: none; }
+.husic-window-drag { position: absolute; inset: 0 144px auto 0; height: 22px; pointer-events: auto; }
+.husic-window-edge { position: absolute; pointer-events: auto; }
+.husic-window-edge[data-edge="left"] { inset: 10px auto 10px 0; width: 6px; cursor: ew-resize; }
+.husic-window-edge[data-edge="right"] { inset: 10px 0 10px auto; width: 6px; cursor: ew-resize; }
+.husic-window-edge[data-edge="top"] { inset: 0 10px auto; height: 6px; cursor: ns-resize; }
+.husic-window-edge[data-edge="bottom"] { inset: auto 10px 0; height: 6px; cursor: ns-resize; }
+.husic-window-edge[data-edge="top-left"] { inset: 0 auto auto 0; width: 10px; height: 10px; cursor: nwse-resize; }
+.husic-window-edge[data-edge="top-right"] { inset: 0 0 auto auto; width: 10px; height: 10px; cursor: nesw-resize; }
+.husic-window-edge[data-edge="bottom-left"] { inset: auto auto 0 0; width: 10px; height: 10px; cursor: nesw-resize; }
+.husic-window-edge[data-edge="bottom-right"] { inset: auto 0 0 auto; width: 10px; height: 10px; cursor: nwse-resize; }
+.husic-window-hit-regions[data-maximized="true"] .husic-window-edge { display: none; }
+.husic-window-controls {
   position: fixed; z-index: 100; top: 6px; right: 6px; left: auto; bottom: auto;
   display: flex; width: 126px; height: 32px; margin: 0; padding: 0; overflow: visible;
   border: 0; background: transparent; color: var(--secondary, #6e6e73);
   font: 12px 'Microsoft YaHei UI', system-ui, sans-serif;
   -webkit-app-region: no-drag; app-region: no-drag;
 }
-.music-window-controls::backdrop { background: transparent; pointer-events: none; }
-.music-window-controls > button {
+.husic-window-controls::backdrop { background: transparent; pointer-events: none; }
+.husic-window-controls > button {
   position: relative; display: grid; place-items: center; flex: none; width: 42px; height: 32px;
   border: 0; border-radius: 7px; padding: 0; background: transparent; color: inherit; cursor: default;
   transition: background-color 120ms ease, color 120ms ease, transform 140ms cubic-bezier(.22,1,.36,1);
 }
-.music-window-controls > button:hover { background: var(--fill-strong, rgba(0,0,0,.075)); color: var(--ink, #1d1d1f); }
-.music-window-controls > button:active { transform: scale(.94); background: var(--selected, rgba(0,0,0,.1)); }
-.music-window-controls > button:focus-visible { outline: 2px solid currentColor; outline-offset: -4px; }
-.music-window-controls > button::after {
+.husic-window-controls > button:hover { background: var(--fill-strong, rgba(0,0,0,.075)); color: var(--ink, #1d1d1f); }
+.husic-window-controls > button:active { transform: scale(.94); background: var(--selected, rgba(0,0,0,.1)); }
+.husic-window-controls > button:focus-visible { outline: 2px solid currentColor; outline-offset: -4px; }
+.husic-window-controls > button::after {
   content: attr(data-label); position: absolute; top: 40px; right: 0; width: max-content; padding: 6px 9px;
   border: .5px solid var(--line, rgba(0,0,0,.08)); border-radius: 7px; pointer-events: none;
   background: var(--canvas, #fff); color: var(--ink, #1d1d1f); box-shadow: 0 4px 14px rgba(0,0,0,.1);
   opacity: 0; visibility: hidden; transition: opacity 100ms ease, visibility 0s 100ms;
 }
-.music-window-controls > button:hover::after { opacity: 1; visibility: visible; transition-delay: 600ms; }
-html[data-music-desktop] .sidebar { padding-top: 28px; }
-html[data-music-desktop] .page-header { padding-top: 46px; }
-html[data-music-desktop] .page-header.is-compact { padding-top: 40px; padding-bottom: 6px; min-height: 66px; }
-html[data-music-desktop] .page-header :is(button, a, input, .page-actions) { -webkit-app-region: no-drag; app-region: no-drag; }
-html[data-music-desktop] .np-top { padding-top: 42px; }
-@media (min-width:761px) { html[data-music-desktop] .np-tabs { top: 54px; right: 108px; } }
-body:has(.now-playing.is-open) .music-window-controls { color: rgba(255,255,255,.7); }
-body:has(.now-playing.is-open) .music-window-controls > button:hover { color: #fff; background: rgba(255,255,255,.12); }
-html[data-music-desktop] .desktop-settings { scroll-margin: 110px; }
+.husic-window-controls > button:hover::after { opacity: 1; visibility: visible; transition-delay: 600ms; }
+html[data-husic-desktop] .sidebar { padding-top: 28px; }
+html[data-husic-desktop] .page-header { padding-top: 46px; }
+html[data-husic-desktop] .page-header.is-compact { padding-top: 40px; padding-bottom: 6px; min-height: 66px; }
+html[data-husic-desktop] .page-header :is(button, a, input, .page-actions) { -webkit-app-region: no-drag; app-region: no-drag; }
+html[data-husic-desktop] .np-top { padding-top: 42px; }
+@media (min-width:761px) { html[data-husic-desktop] .np-tabs { top: 54px; right: 108px; } }
+body:has(.now-playing.is-open) .husic-window-controls { color: rgba(255,255,255,.7); }
+body:has(.now-playing.is-open) .husic-window-controls > button:hover { color: #fff; background: rgba(255,255,255,.12); }
+html[data-husic-desktop] .desktop-settings { scroll-margin: 110px; }
 .desktop-close-choice {
   display: flex; gap: 3px; margin: 0; padding: 3px; min-inline-size: 0;
   border: .5px solid var(--line); border-radius: 10px; background: var(--fill-strong);
@@ -75,15 +75,15 @@ html[data-music-desktop] .desktop-settings { scroll-margin: 110px; }
 .desktop-settings-note { padding: 10px 14px 0; color: var(--secondary); font-size: 11px; line-height: 1.6; }
 .desktop-settings-error:empty { display: none; }
 .desktop-settings-error { margin-top: 10px; padding: 0 14px; font-size: 12px; color: var(--ink); }
-html[data-motion="reduced"] .music-window-controls > button,
+html[data-motion="reduced"] .husic-window-controls > button,
 html[data-motion="reduced"] .desktop-switch,
 html[data-motion="reduced"] .desktop-switch > span,
 html[data-motion="reduced"] .desktop-size-control > button { transition: none; }
 @media (prefers-reduced-motion: reduce) {
-  .music-window-controls > button, .desktop-switch, .desktop-switch > span, .desktop-size-control > button { transition: none; }
+  .husic-window-controls > button, .desktop-switch, .desktop-switch > span, .desktop-size-control > button { transition: none; }
 }
 @media (forced-colors: active) {
-  .music-window-controls > button { color: ButtonText; }
+  .husic-window-controls > button { color: ButtonText; }
   .desktop-close-choice .is-selected, .desktop-switch[aria-checked="true"] { outline: 2px solid Highlight; }
 }
 .desktop-lyric-options { padding: 20px; border-top: .5px solid var(--line); }

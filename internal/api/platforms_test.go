@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"music/internal/accounts"
-	"music/internal/platform"
+	"github.com/hardware661/husic/internal/accounts"
+	"github.com/hardware661/husic/internal/platform"
 )
 
 func TestExpiredPlatformAttemptIsGoneNotGatewayFailure(t *testing.T) {

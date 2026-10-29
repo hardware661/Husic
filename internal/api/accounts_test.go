@@ -1,7 +1,7 @@
 package api
 
 import (
-	"music/internal/accounts"
+	"github.com/hardware661/husic/internal/accounts"
 	"net/http/httptest"
 	"strings"
 	"testing"

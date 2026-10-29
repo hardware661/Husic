@@ -15,7 +15,7 @@ class Foreground(unittest.TestCase):
         self.context.close()
         self.context=self.browser.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True,reduced_motion='no-preference')
         self.context.add_init_script('''localStorage.setItem('player',JSON.stringify({volume:0}));const OriginalAudio=window.Audio;window.__testAudios=[];window.Audio=function(...a){const audio=new OriginalAudio(...a);window.__testAudios.push(audio);return audio};window.Audio.prototype=OriginalAudio.prototype;
-        window.__scrollWrites=0;const set=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(k.startsWith('music-scroll:'))window.__scrollWrites++;return set.call(this,k,v)};''')
+        window.__scrollWrites=0;const set=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(k.startsWith('husic-scroll:'))window.__scrollWrites++;return set.call(this,k,v)};''')
         self.context.route('**/api/**',self.route)
         self.context.route('**/fixture.wav',lambda r:r.fulfill(body=self.audio,content_type='audio/wav'))
         self.context.route('**/test-cover.svg',lambda r:r.fulfill(content_type='image/svg+xml',body='<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#c58b67"/></svg>'))
@@ -89,7 +89,7 @@ class Foreground(unittest.TestCase):
         for path in ['/discover','/library','/','/discover','/library','/']:
             self.page.locator(f'.tab-bar a[href="{path}"]').click()
         self.assertEqual(self.page.evaluate('history.length'),before)
-        self.assertLessEqual(self.page.evaluate('Object.keys(sessionStorage).filter(k=>k.startsWith("music-scroll:")).length'),4,'peer tabs must reuse bounded scroll records too')
+        self.assertLessEqual(self.page.evaluate('Object.keys(sessionStorage).filter(k=>k.startsWith("husic-scroll:")).length'),4,'peer tabs must reuse bounded scroll records too')
         self.page.locator('.shelf-item').first.click()
         expect(self.page.locator('.collection-header')).to_be_visible()
         self.page.get_by_role('button',name='返回上一页',exact=True).click()

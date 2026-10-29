@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"music/internal/source"
+	"github.com/hardware661/husic/internal/source"
 )
 
 // Linker remembers copies found on the way; the store implements it.

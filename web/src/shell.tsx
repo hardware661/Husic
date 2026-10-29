@@ -32,7 +32,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
   return (
     <aside className="sidebar" id="desktop-sidebar" onDragStart={event => event.preventDefault()} onContextMenu={event => event.preventDefault()}>
       <button className="brand" type="button" onClick={onToggle} aria-expanded={!collapsed} aria-controls="sidebar-navigation" aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'} title={collapsed ? '展开侧边栏' : '收起侧边栏'}>
-        <img className="brand-mark" src="/brand/music-icon.svg?v=20261022-hardware-a" width={28} height={28} alt="" />
+        <img className="brand-mark" src="/brand/husic-icon.svg?v=0.2.0" width={28} height={28} alt="" />
         <strong>Husic</strong>
         <Icon name="chevron" size={12} className="brand-disclosure" />
       </button>

@@ -19,16 +19,17 @@ export function searchMusic(query: string) {
   if (cache.size > 16) cache.delete(cache.keys().next().value!);
   return pending;
 }
+const historyKey = 'husic-search-history';
 export function searchHistory(): string[] {
-  try { const value=JSON.parse(localStorage.getItem('music-search-history')||'[]');return Array.isArray(value)?value.filter((s):s is string=>typeof s==='string'&&s.length<=96).slice(0,8):[]; } catch { return []; }
+  try { const value=JSON.parse(localStorage.getItem(historyKey)||localStorage.getItem('music-search-history')||'[]');return Array.isArray(value)?value.filter((s):s is string=>typeof s==='string'&&s.length<=96).slice(0,8):[]; } catch { return []; }
 }
 export function rememberSearch(q: string) {
-  try { localStorage.setItem('music-search-history',JSON.stringify([q.slice(0,96),...searchHistory().filter(s=>s!==q)].slice(0,8))); } catch {}
+  try { localStorage.setItem(historyKey,JSON.stringify([q.slice(0,96),...searchHistory().filter(s=>s!==q)].slice(0,8))); } catch {}
 }
 export function removeSearch(q?: string) {
   try {
-    if(q===undefined)localStorage.removeItem('music-search-history');
-    else localStorage.setItem('music-search-history',JSON.stringify(searchHistory().filter(s=>s!==q)));
+    if(q===undefined){localStorage.removeItem(historyKey);localStorage.removeItem('music-search-history');}
+    else localStorage.setItem(historyKey,JSON.stringify(searchHistory().filter(s=>s!==q)));
   } catch {}
 }
 export function openSearch() { window.dispatchEvent(new Event('husic-open-search')); }

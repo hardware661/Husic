@@ -546,7 +546,7 @@ function useMediaSession(
       album: current.album,
       artwork: current.cover
         ? [256, 512].map((px) => ({ src: sized(current.cover, px), sizes: `${px}x${px}`, type: 'image/jpeg' }))
-        : [{ src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' }],
+        : [{ src: '/brand/husic-512.png', sizes: '512x512', type: 'image/png' }],
     });
   }, [current]);
   useEffect(() => {

@@ -1,4 +1,4 @@
--- One row per recording as Music knows it; platform copies hang off it.
+-- One row per recording as Husic knows it; platform copies hang off it.
 CREATE TABLE songs (
     id         bigserial PRIMARY KEY,
     title      text        NOT NULL,
@@ -20,7 +20,7 @@ CREATE TABLE song_sources (
     duration    integer     NOT NULL DEFAULT 0,
     cover       text        NOT NULL DEFAULT '',
     extra       jsonb       NOT NULL DEFAULT '{}',
-    pinned      boolean     NOT NULL DEFAULT false, -- the owner picked this copy
+    pinned      boolean     NOT NULL DEFAULT false, -- the listener picked this copy
     last_ok     timestamptz,
     last_fail   timestamptz,
     fail_reason text        NOT NULL DEFAULT '',

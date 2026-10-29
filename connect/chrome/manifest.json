@@ -1,13 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "Music 连接助手",
-  "version": "1.0.0",
-  "description": "从 Music 设置打开独立 YouTube 登录窗口，并将本次会话接回自己的 Music。",
+  "name": "Husic 连接助手",
+  "version": "1.1.0",
+  "description": "从 Husic 设置打开独立的 YouTube 登录窗口，并把这次登录接回你自己的 Husic。",
   "permissions": ["cookies", "storage"],
   "host_permissions": ["https://*.youtube.com/*", "http://127.0.0.1:18788/*"],
   "incognito": "spanning",
   "background": { "service_worker": "background.js", "type": "module" },
   "content_scripts": [{ "matches": ["http://127.0.0.1:18788/*"], "js": ["content.js"], "run_at": "document_idle" }],
-  "action": { "default_title": "打开 Music 设置", "default_icon": "icon.png" },
+  "action": { "default_title": "打开 Husic 设置", "default_icon": "icon.png" },
   "icons": { "128": "icon.png" }
 }

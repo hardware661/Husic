@@ -41,9 +41,9 @@ vm.runInNewContext(await readFile(new URL('./chrome/content.js', import.meta.url
   chrome: { runtime: { async sendMessage() { sent++; return { ok: true, cookies: 'private-fixture' }; } } },
   async fetch(path, options) { assert.equal(path, `/api/accounts/youtube/login/${id}/complete`); assert.equal(options.credentials, 'same-origin'); assert.match(options.body, /private-fixture/); return { ok: true, async json() { return { id, kind: 'youtube', state: 'connected' }; } }; },
 });
-await receive({ source: window, origin: 'https://unrelated.test', data: { type: 'MUSIC_CONNECT_REQUEST', requestId: 'request', action: 'complete', id } });
+await receive({ source: window, origin: 'https://unrelated.test', data: { type: 'HUSIC_CONNECT_REQUEST', requestId: 'request', action: 'complete', id } });
 assert.equal(sent, 0);
-await receive({ source: window, origin: 'http://127.0.0.1:18788', data: { type: 'MUSIC_CONNECT_REQUEST', requestId: 'request', action: 'complete', id } });
+await receive({ source: window, origin: 'http://127.0.0.1:18788', data: { type: 'HUSIC_CONNECT_REQUEST', requestId: 'request', action: 'complete', id } });
 assert.equal(posted.result.attempt.state, 'connected'); assert.doesNotMatch(JSON.stringify(posted), /private-fixture|cookies/);
 const manifest = JSON.parse(await readFile(new URL('./chrome/manifest.json', import.meta.url), 'utf8'));
 assert.deepEqual(manifest.permissions, ['cookies', 'storage']); assert.equal(manifest.host_permissions.includes('<all_urls>'), false);

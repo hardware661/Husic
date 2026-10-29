@@ -1,6 +1,6 @@
 """User-facing playlist, navigation and mini-player checks against an isolated instance.
 
-Start the frontend, then run MUSIC_TEST_URL=http://127.0.0.1:5190 python3 web/tests/test_controls.py.
+Start the frontend, then run HUSIC_TEST_URL=http://127.0.0.1:5190 python3 web/tests/test_controls.py.
 Requires an existing Python Playwright installation and Chromium.
 """
 import io
@@ -70,7 +70,7 @@ class Controls(unittest.TestCase):
         route.fulfill(body=self.audio, headers={'Content-Type': 'audio/wav', 'X-Husic-Audio-Format': 'wav'})
 
     def open(self, path='/playlist/1'):
-        self.page.goto(os.environ.get('MUSIC_TEST_URL', 'http://127.0.0.1:5190') + path)
+        self.page.goto(os.environ.get('HUSIC_TEST_URL', 'http://127.0.0.1:5190') + path)
         self.page.locator('.collection-header,.crate,.download-manager-page').first.wait_for()
 
     def menu(self):

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"music/internal/source"
+	"github.com/hardware661/husic/internal/source"
 )
 
 type feedProvider string

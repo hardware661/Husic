@@ -1,86 +1,89 @@
-# Husic · Windows 绿色客户端
+# Husic · Windows 客户端
 
-当前 0.1.0 绿色客户端，项目说明见 [README](../README.md)。连接自己部署的 Husic 后端，复用同一套 React 网页，不附带后端或数据库。已下载和本地导入的音频副本支持离线播放。界面随服务器更新，原生壳单独升级。
+一个单文件的绿色 `Husic.exe`：用 WebView2 打开你自己的 Husic 服务器，加上托盘、媒体键、透明桌面歌词和原生窗口外观。它不带后端或数据库，网页界面随服务器更新，原生外壳单独升级。
+
+## 系统要求
+
+- Windows 10 / 11 x64
+- .NET Framework 4.7.2 或更新版本（系统一般自带）
+- Microsoft Edge WebView2 运行时（Windows 11 自带；没有时客户端会提示去官网安装）
 
 ## 使用
 
-1. 解压绿色包，双击`Husic.exe`。也可单独移动这个exe，运行所需的SDK组件已嵌入。
-2. 默认连接本机 `http://127.0.0.1:18788`，没有内置的私人登录网站。构建时用 `-ServerOrigin` 指定自己的 HTTPS 实例；如有独立门禁可选 `-LoginOrigin`。音乐账号在设置中连接。
-3. 默认关闭窗口会收进托盘继续听。单击托盘图标打开；右键有当前歌曲、播控、打开、桌面歌词／锁定、设置、窗口置顶和真正退出。播控不关闭弹层，鼠标和键盘都可操作。
-4. 第二次双击exe只唤起原窗口，不产生第二个播放器。不注册开机自启、不改默认浏览器／代理／系统网络。
-5. YouTube重新连接会转到现有Chrome的Music设置，继续用已安装的连接助手；客户端不读取日常Chrome的Cookie。网易／B站仍可在客户端设置中扫码。
+1. 双击 `Husic.exe`。默认连接本机 `http://127.0.0.1:18788`，连接自己的服务器见下文「构建」。
+2. 关闭窗口默认收进托盘继续播放。单击托盘图标打开窗口；右键菜单有当前歌曲、播控、桌面歌词、窗口置顶和退出。
+3. 第二次双击只会唤起原来的窗口，不会开第二个播放器。
+4. 客户端不注册开机自启，也不改默认浏览器、代理或系统网络。
 
-## 桌面外观与设置
+电脑设置页里有一节「桌面体验」，可以调整：
 
-0.6.1默认窗口恢复工作区76%（上限1920px），高度维持84%（上限1200px），已保存的自选尺寸不被覆盖。发现页保留左目录和四张扇形封面，缩小卡片及展开间距，自适应原有窗口。
-
-0.2不再使用默认系统标题栏和默认蓝色托盘菜单。窗口按钮融入网页，取消重复的应用标题；保留Windows自身的可缩放窗口、最大化和任务栏工作区。0.2.1修复拖动／边角拉伸：透明命中区只发送固定动作，由顶层原生窗口执行移动／调整大小，不依赖WebView2的CSS拖动区转发。网站与手机不加载桌面专用样式。电脑侧栏Logo的收放属于共享网页，两端重载同步；手机Logo仍进设置。
-
-电脑设置页新增「桌面体验」：
-
-| 选项 | 行为 |
+| 选项 | 说明 |
 | --- | --- |
-| 桌面歌词 | 开启后展开歌词设置，可关闭副歌词；逐像素透明浮窗，横向双行／竖向双列；边角拉伸、悬停居中播控、颜色／字号上下限／底板、锁定穿透及托盘解锁 |
-| 关闭窗口时 | 收进托盘继续听（默认），或真正退出Music |
-| 窗口置顶 | 默认关闭，可从设置或托盘切换 |
-| 界面大小 | 85%／100%／115%／125%；只改网页比例，点百分比恢复100% |
-| 窗口大小 | 默认100%，70–125%按5%步进；选择会保存，下次居中，和界面缩放独立 |
-| 保存当前窗口大小 | 主动保存手动调好的尺寸；后续未保存的拖动不覆盖，位置不保存 |
+| 桌面歌词 | 透明浮窗，横排两行或竖排两列；可调颜色、字号范围、底板，锁定后鼠标点击会穿透 |
+| 关闭窗口时 | 收进托盘继续听（默认），或直接退出 |
+| 窗口置顶 | 默认关闭，也可以从托盘切换 |
+| 界面大小 | 85% / 100% / 115% / 125%，只缩放网页内容 |
+| 窗口大小 | 70%–125%，下次启动居中打开；也可以「保存当前窗口大小」 |
 
-网页的深浅色和减少动态偏好同步到窗口和托盘，不另造一套主题选项。上次解析出的深浅色也用于下次启动背景。托盘封面只接受网页当前MediaMetadata派生的64px图片，CDN不允许读取时回退H标；盲听不另查真实歌曲或封面。关闭、缩放等配置只保存在当前电脑。
+深浅色和「减少动态效果」跟随网页设置，不另设一套。
 
-Windows10/11 x64，需系统已有.NET Framework4.7.2+与Microsoft Edge WebView2。当前电脑的WebView2已实际确认。没有系统运行时的其它电脑需自行安装官方WebView2，不暗中装整套浏览器或改系统配置。
+## 数据在哪里
 
-没有主动设置时，真正重开按工作区约76%宽、84%高居中（上限1920×1200，小屏收窄）；可在设置选择比例或明确保存当前尺寸作为启动默认。普通拖动不自动覆盖、从不保存位置或最大化状态。收进托盘不是退出，唤回仍保持当次状态；登录、队列、界面缩放等其它偏好继续保留。仅exe主内容区隐藏右侧滚动条，滚轮／触控板滚动保留；普通文字不能拖蓝选中，输入框仍可正常编辑。
+客户端数据都在 `%LOCALAPPDATA%\Husic\`：
 
-## 颜色、图片与透明歌词
+- `WebView\`：客户端自己的网页登录、播放队列、偏好、背景图，以及下载和导入的音频副本。
+- `desktop.json`：桌面偏好（关闭行为、置顶、缩放、窗口尺寸、歌词设置）。
+- `Runtime\`：校验过的 WebView2 Loader。
 
-Husic是原Music改名，来源域名、应用ID、`%LOCALAPPDATA%\Music`及存储键不迁移，保留账号与队列。桌面交付名为Husic.exe，新版放到Husic文件夹；运行中的旧Music工作目录可能暂留为空，退出旧进程后才能移除；不要据名称手动清空数据。
+0.1 版本的数据放在 `%LOCALAPPDATA%\Music\`。0.2 第一次启动时会自动搬到新位置；如果旧版还开着、搬不动，就继续用原来的位置，不会丢数据。
 
-网页外观保留默认黑白灰，额外六种色系＋自定义颜色。背景图片仅本机IndexedDB：最多10MB JPG/PNG/WebP/AVIF，经解码校验并缩至最长2560px后保存，不发到服务器；浓度／柔化可调，可移除。其他设备需各自设置。
-
-歌词默认为逐像素透明，只绘制描边文字；悬停临时出现工具底板，空白拖动、四边四角拉伸，缩小达到字号下限后省略。横向双行／竖向直立文字双列，仅在设置里选择方向；拖到屏幕边缘不会自动换向。主／副歌词颜色分别自定义，12–96px范围内可设置合法上下限；锁定完全穿透鼠标，托盘解锁不唤回主窗。
-
-## 本地音频与下载
-
-音乐库提供“下载管理”和“本地导入”，侧栏仍保留我喜欢与最近播放。导入支持多选或把文件拖入本地导入页面，常见 WAV／MP3／FLAC／AAC 保持原文件编码直接播放。应用内下载和导入副本保存在当前 WebView 的 IndexedDB，不上传导入文件。移除副本不删原文件。
-
-歌曲菜单可下载、取消、重试；本机副本可另存为。原生另存为只接受 Husic 自己生成的音频 Blob，弹出保存对话框后由用户选路径；不支持把网页指定的任意文件写到磁盘。待播的拖动把手支持鼠标、触控和方向键，按实际待播顺序移动，不重播当前歌曲，随机播放顺序也随保存恢复。
-
-## 数据与升级
-
-所有客户端数据集中在`%LOCALAPPDATA%\Music\`：`WebView/`是独立的网页登录、队列与偏好，旧`window.json`只保留但不再读取或写入，`desktop.json`是关闭行为／置顶／界面缩放／主动保存的窗口尺寸／上次深浅色／歌词显示、锁定、颜色、方向与字号上下限，`Runtime/<SDK版本>/x64/`仅存校验过的官方Loader。不会写到桌面、exe旁边或其它项目。
-
-网页登录数据独立于日常Chrome；旧浏览器队列不自动迁入。Music服务器上的收藏／歌单不受影响。退出Music后替换exe即可升级，应用ID、数据目录不随版本改变；不要删除数据目录来“清理升级”。不用时删除exe／绿色包即可，用户数据不会随之删除。
+升级时退出客户端、替换 exe 即可。删除 exe 不会删除这些数据。退出后运行 `Husic.exe --reset-ui` 可以把客户端恢复到初始状态：会清空本机队列、偏好、图片和下载副本，服务器上的曲库不受影响。
 
 ## 构建
 
-不依赖Rust/MSVC/Node/.NET SDK新安装，不修改Go后台依赖。微软WebView2托管SDK与Loader采用项目本地NuGet包，版本／官方URL／SHA256锁定在`packages.lock.json`；完整许可证嵌入exe并随绿色包发放。
+需要 Windows 自带的 .NET Framework C# 编译器，不用另装 .NET SDK、Rust 或 Visual Studio。WebView2 SDK 下载到 `desktop/vendor/`，版本、官方地址和 SHA256 锁定在 `packages.lock.json`。
 
-```text
-python3 desktop/fetch-sdk.py
+```powershell
+python desktop/fetch-sdk.py
 powershell -NoProfile -ExecutionPolicy Bypass -File desktop/build.ps1
+```
+
+产物是 `desktop/dist/Husic.exe`。连接自己的 HTTPS 服务器：
+
+```powershell
+./desktop/build.ps1 -ServerOrigin https://music.example.com
+```
+
+服务器前面另有一个独立的登录页面时，再加 `-LoginOrigin https://login.example.com`。HTTP 只允许本机回环地址。
+
+在 WSL 里构建时，先用 `wslpath -w` 把脚本路径转换成 Windows 路径，再交给 `powershell.exe`。
+
+## 测试
+
+```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File desktop/test.ps1
 ```
 
-build使用Windows自带.NET Framework C#编译器；在WSL运行时将脚本路径用wslpath转换为Windows路径后调用powershell.exe。产物在desktop/dist，依赖在vendor；均已忽略，不往主仓塞二进制或用户会话。
+测试会另外生成一个 `Husic.QA.exe`（不随包分发），用虚拟 HTTPS 站点、项目真实样式和静音 WAV，在 `%LOCALAPPDATA%\Husic\QA\` 的隔离目录里运行，检查真实的鼠标拖动、边角拉伸、窗口按钮、托盘、单实例、偏好保存和导航边界。截图和结果 JSON 保存在 `desktop/build/`。
 
-`test.ps1`单独生成Music.QA.exe，不随包分发：使用独立虚拟HTTPS站点、项目真实样式、静音WAV和`%LOCALAPPDATA%\Music\QA/`临时配置，验证真实鼠标拖动／四边四角拉伸（85%和125%界面缩放）、原生窗口按钮／任务栏边界／网页弹窗、桌面设置与托盘键盘播控、窗口关闭后后台音频、连续两次单实例唤醒、HttpOnly Cookie／队列／偏好与窗口默认重置、导航失败重试及来源边界。每轮截图和JSON保存在desktop/build的隔离目录。0.2.2验证带旧位置／尺寸／最大化配置仍默认居中启动、修改窗口后跨进程仍重置；托盘唤回保持当次窗口。测试不写主人实际播放历史或收藏。
+可以只跑某一组：`-LyricsOnly`、`-WindowOnly`、`-FontOnly`、`-RestoreOnly`、`-StartupOnly`、`-SecondaryOnly`、`-ResetOnly`、`-AudioOnly`。
 
-`test.ps1 -SecondaryOnly`通过真实网页点击开启／展开歌词设置、关闭副歌词并跨进程保留。
+物理媒体键、长时间连续播放还没有自动化测试。
 
-`test.ps1 -RestoreOnly`连续验证8次最小化恢复、8次最大化还原和4次系统命令混合恢复，逐次核对窗口位置／宽高完全不变；启动默认仍只由显式保存决定。
+## 代码结构
 
-`test.ps1 -WindowOnly`验证界面缩放与实体窗口互不影响、主动保存与跨进程恢复居中；`test.ps1 -LyricsOnly`专项验证浮窗不抢焦点、真实拖动／点击穿透、托盘解锁、seek和隐藏后更新，第二个进程验证歌词偏好与默认窗口。高DPI首屏先建立句柄再算尺寸，避免下行歌词被裁；分层窗口截图用自身可见区域，不把WM_PRINT对子按钮的错误绘制误当真实画面。
+| 文件 | 负责 |
+| --- | --- |
+| `Bootstrap.cs` | 入口、内嵌资源、WebView2 Loader |
+| `DesktopForm.cs` | 主窗口、WebView2、导航边界、网页消息 |
+| `DesktopChrome.cs`、`desktop-chrome.js/css` | 原生窗口外观、窗口按钮、桌面设置区 |
+| `DesktopState.cs` | 构建配置、数据目录、桌面偏好 |
+| `TrayMenu.cs` | 自绘托盘菜单 |
+| `DesktopLyrics.cs`、`LayeredSurface.cs` | 逐像素透明的桌面歌词浮窗 |
+| `SingleInstance.cs` | 单实例与二次启动唤起 |
+| `desktop-bridge.js` | 网页播放状态、媒体控制与原生之间的桥 |
+| `DesktopTests.cs` | 只编进 `Husic.QA.exe` 的原生测试 |
 
-## 原生边界与当前验证
+边界：网页不能执行本机命令、读写任意文件或打开任意 URL。原生层只接收固定格式的播放状态、64px 封面、枚举化的桌面偏好和固定的窗口动作。只嵌入你的 Husic 站点（以及可选的登录站点），外部 HTTPS 链接只在用户点击时交给系统浏览器。新增原生能力时请保持这种固定白名单的做法。
 
-网页没有本机命令、通用文件或通用URL执行接口。原生只接收同一Music主页面的受限播放状态、64px图片、枚举化桌面偏好与“打开固定浏览器设置页”消息；既有统一登录域仅可操作固定窗口动作（最小化／最大化／关闭／移动／八向拉伸），不能修改桌面偏好或播控。只嵌入Music和既有统一登录域，拒绝本地文件／自定义协议／非授权自动导航，外部HTTPS链接仅随用户点击交给浏览器。桥接复用当前MediaSession和同一Audio，不另起播放器，盲听使用现有隐藏Metadata。
-
-维护边界：`DesktopChrome.cs`处理原生窗口和本地偏好；`desktop-chrome.js/css`只为exe注入窗口按钮和设置区；`MusicTrayMenu.cs`自绘原生托盘；`DesktopLyrics.cs`和`LayeredSurface.cs`绘制独立逐像素透明歌词浮窗，不创建额外WebView或播放器。共享`web/src/lyrics.ts`缓存同一歌词请求，`desktop-lyrics.ts`在歌词开启时发布受限文本；隐藏后继续计时，盲听不请求或发布真实歌词。纯文本无时间轴时显示歌曲与说明，不假装同步滚动。后续新增窗口动作必须是固定白名单命令；没有明确需求不添加任意URL、脚本或文件桥。真正的网页结构变动仍在web/维护，不在桌面层复制一套首页。
-
-已完成Windows真实启动、首页业务内容读取，以及上述两阶段原生检查。系统WM_APPCOMMAND媒体命令已测；**物理键盘／耳机媒体键、真实歌曲在此客户端的长时间连播，以及跨周登录有效期尚未专项验证**。Cookie持久化通过不等于保证门户永不要求重新登录。绿色版尚未签名，不冒充已做安装／卸载／安装包覆盖升级验收。
-
-官方依据：[WebView2 WinForms](https://learn.microsoft.com/microsoft-edge/webview2/get-started/winforms)、[WebView2安全边界](https://learn.microsoft.com/microsoft-edge/webview2/concepts/security)。与先前Tauri建议同用WebView2；结合本机只有现成.NET编译器、没有Windows原生Rust工具链，首版采用轻量WinForms外壳，不安装新的全局构建环境。
-
-退出 Husic 后，显式运行 `Husic.exe --reset-ui` 可恢复默认桌面偏好并清空本机队列、网页存储、图片，以及下载和导入的应用内音频副本；网站通行 Cookie 保留。服务器曲库不受该参数影响，重置前应备份客户端数据。
+参考：[WebView2 WinForms](https://learn.microsoft.com/microsoft-edge/webview2/get-started/winforms)、[WebView2 安全最佳实践](https://learn.microsoft.com/microsoft-edge/webview2/concepts/security)。

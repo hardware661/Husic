@@ -22,9 +22,9 @@ import (
 	"sync"
 	"time"
 
-	"music/internal/privatefile"
-	"music/internal/source"
-	"music/internal/ytmusic"
+	"github.com/hardware661/husic/internal/privatefile"
+	"github.com/hardware661/husic/internal/source"
+	"github.com/hardware661/husic/internal/ytmusic"
 )
 
 type Config struct {

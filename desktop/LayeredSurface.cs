@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
-namespace Hardware.Music
+namespace Husic.Desktop
 {
     // Per-pixel alpha: the lyrics remain opaque while the empty desktop is
     // genuinely transparent. No color-key fringes or second browser surface.

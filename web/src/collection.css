@@ -1,6 +1,6 @@
 .collection-header { position: relative; align-items: center; gap: 32px; padding: 22px 0 30px; }
 .collection-menu { position: absolute; top: 38px; right: 0; }
-html[data-music-desktop] .collection-menu { top: 58px; }
+html[data-husic-desktop] .collection-menu { top: 58px; }
 .collection-menu > .icon-button { width: 36px; height: 36px; background: var(--fill); color: var(--ink); }
 .collection-header.has-menu h1 { padding-right: 40px; }
 .playlist-actions-menu { inset: auto; margin: 0; min-width: 172px; border: .5px solid var(--line); color: var(--ink); }
@@ -27,7 +27,7 @@ html[data-music-desktop] .collection-menu { top: 58px; }
 .back-to-top.is-visible { opacity: 1; visibility: visible; pointer-events: auto; transform: translate(-50%,0); }
 .back-to-top:is(:hover,:focus-visible) span { width: 40px; opacity: 1; }
 .is-sidebar-collapsed .back-to-top { left: calc(50% + 36px); }
-html[data-music-desktop] .back-to-top { top: 42px; }
+html[data-husic-desktop] .back-to-top { top: 42px; }
 @media (max-width:760px) {
   .collection-actions:has(> .bulk-download-button) { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
   .collection-actions:has(> .bulk-download-button) .play-buttons { display: contents; }

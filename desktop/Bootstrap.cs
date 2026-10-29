@@ -8,13 +8,13 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Husic")]
 [assembly: AssemblyProduct("Husic")]
-[assembly: AssemblyCompany("hardware")]
-[assembly: AssemblyDescription("Husic · hardware")]
-[assembly: AssemblyVersion("0.1.0.0")]
-[assembly: AssemblyFileVersion("0.1.0.0")]
+[assembly: AssemblyCompany("Husic contributors")]
+[assembly: AssemblyDescription("Husic desktop client")]
+[assembly: AssemblyVersion("0.2.0.0")]
+[assembly: AssemblyFileVersion("0.2.0.0")]
 [assembly: ComVisible(false)]
 
-namespace Hardware.Music
+namespace Husic.Desktop
 {
     internal static class Program
     {
@@ -59,7 +59,7 @@ namespace Hardware.Music
         {
             string name = new AssemblyName(args.Name).Name;
             if (name != "Microsoft.Web.WebView2.Core" && name != "Microsoft.Web.WebView2.WinForms") return null;
-            return Assembly.Load(Resources.Bytes("Music.SDK." + name + ".dll"));
+            return Assembly.Load(Resources.Bytes("Husic.SDK." + name + ".dll"));
         }
     }
 
@@ -78,10 +78,10 @@ namespace Hardware.Music
         internal static string Text(string name) { return System.Text.Encoding.UTF8.GetString(Bytes(name)); }
         internal static string LoaderDirectory()
         {
-            string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Music", "Runtime", SdkVersion, "x64");
+            string directory = Path.Combine(DataDirectory.Root(), "Runtime", SdkVersion, "x64");
             Directory.CreateDirectory(directory);
             string file = Path.Combine(directory, "WebView2Loader.dll");
-            byte[] expected = Bytes("Music.SDK.WebView2Loader.dll");
+            byte[] expected = Bytes("Husic.SDK.WebView2Loader.dll");
             if (File.Exists(file) && Equal(File.ReadAllBytes(file), expected)) return directory;
             string temporary = file + "." + Guid.NewGuid().ToString("N") + ".tmp";
             File.WriteAllBytes(temporary, expected);

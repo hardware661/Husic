@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"music/internal/source"
+	"github.com/hardware661/husic/internal/source"
 )
 
 type testProvider struct {

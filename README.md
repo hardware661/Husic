@@ -50,7 +50,7 @@ cd web
 npm ci
 npm run build
 cd ..
-go build -o bin/husic ./cmd/music
+go build -o bin/husic ./cmd/husic
 mkdir -p .local/accounts
 chmod 700 .local
 ```
@@ -89,7 +89,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File desktop/build.ps1
 
 只有实例另设独立网页登录门户时才指定 `-LoginOrigin https://login.example.com`。HTTP 仅允许本机回环地址。
 
-生成的 `desktop/dist/Husic.exe` 为绿色客户端。默认关闭收进托盘；真正退出使用托盘菜单。原生壳升级需退出后重开；网页更新随服务器同步。客户端数据保留在 `%LOCALAPPDATA%\Music`。
+生成的 `desktop/dist/Husic.exe` 为绿色客户端。默认关闭收进托盘；真正退出使用托盘菜单。原生壳升级需退出后重开；网页更新随服务器同步。客户端数据保留在 `%LOCALAPPDATA%\Husic`。
 
 ## 图片与连接
 

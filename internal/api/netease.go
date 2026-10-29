@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"time"
 
-	"music/internal/netease"
-	"music/internal/source"
-	"music/internal/store"
+	"github.com/hardware661/husic/internal/netease"
+	"github.com/hardware661/husic/internal/source"
+	"github.com/hardware661/husic/internal/store"
 )
 
 var errNoAccount = errors.New("no account for this platform")

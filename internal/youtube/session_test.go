@@ -2,7 +2,7 @@ package youtube
 
 import (
 	"context"
-	"music/internal/source"
+	"github.com/hardware661/husic/internal/source"
 	"os"
 	"path/filepath"
 	"strings"

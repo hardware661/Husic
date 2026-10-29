@@ -110,7 +110,7 @@
 .queue-history .queue-song { opacity: .6; }
 .queue .icon-button { flex: none; }
 
-/* Keep the owner's medium lyric sizes. A soft edge, not a larger active line. */
+/* Keep lyric sizes medium. A soft edge, not a larger active line. */
 .lyric .word { background-image: linear-gradient(90deg,#fff max(0%,calc(var(--p) - 2%)),rgba(255,255,255,.42) min(100%,calc(var(--p) + 2%))); }
 .lyric[data-depth="1"] { color: rgba(255,255,255,.66); }
 .lyric[data-depth="2"] { color: rgba(255,255,255,.48); }

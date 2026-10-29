@@ -1,4 +1,4 @@
-// Package api is Music's HTTP surface: JSON under /api, the web app elsewhere.
+// Package api is Husic's HTTP surface: JSON under /api, the web app elsewhere.
 package api
 
 import (
@@ -16,23 +16,22 @@ import (
 	"sync"
 	"time"
 
-	"music/internal/accounts"
-	"music/internal/catalog"
-	"music/internal/netease"
-	"music/internal/resolve"
-	"music/internal/source"
-	"music/internal/store"
+	"github.com/hardware661/husic/internal/accounts"
+	"github.com/hardware661/husic/internal/catalog"
+	"github.com/hardware661/husic/internal/netease"
+	"github.com/hardware661/husic/internal/resolve"
+	"github.com/hardware661/husic/internal/source"
+	"github.com/hardware661/husic/internal/store"
 )
 
 type Server struct {
-	Accounts   *accounts.Manager
-	Store      *store.Store
-	Resolver   *resolve.Resolver
-	Providers  []source.Provider // searched together, best first
-	Platforms  map[string]PlatformLibrary
-	NetEase    *netease.Client // nil without the owner's account
-	NetEaseUID int64
-	// GatewayHeader/GatewayKey: the edge proxy proves the owner passed the
+	Accounts  *accounts.Manager
+	Store     *store.Store
+	Resolver  *resolve.Resolver
+	Providers []source.Provider // searched together, best first
+	Platforms map[string]PlatformLibrary
+	NetEase   *netease.Client
+	// GatewayHeader/GatewayKey: the edge proxy proves the request passed the
 	// shared login. Without a key only loopback clients are served.
 	GatewayHeader string
 	GatewayKey    string
@@ -281,7 +280,7 @@ func (s *Server) peek(key string) (any, bool) {
 	return hit.value, ok
 }
 
-// background runs account write-backs without making the owner wait.
+// background runs account write-backs without making the listener wait.
 func (s *Server) background(what string, fn func(ctx context.Context) error) {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)

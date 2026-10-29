@@ -6,3 +6,4 @@ web/dist/
 web/tsconfig.tsbuildinfo
 __pycache__/
 .local/
+web/public/connect/

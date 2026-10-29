@@ -4,19 +4,55 @@ using System.IO;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
 
-namespace Hardware.Music
+namespace Husic.Desktop
 {
     internal sealed class DesktopOptions
     {
-        internal string Root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Music");
+        internal string Root = DataDirectory.Root();
         internal string Origin = BuildSettings.Load().ServerOrigin;
         internal string LoginOrigin = BuildSettings.Load().LoginOrigin;
         internal string Entry { get { return entry ?? Origin + "/"; } set { entry = value; } }
         private string entry;
-        internal string AppId = "com.hdwde.music";
+        internal string AppId = "Husic.Desktop";
         internal string FixtureDirectory = null;
         internal bool Test = false;
         internal bool ResetUi = false;
+    }
+
+    internal static class DataDirectory
+    {
+        private static string root;
+
+        /// <summary>%LOCALAPPDATA%\Husic. Versions before 0.2 kept the same data in
+        /// %LOCALAPPDATA%\Music; it moves over once, before anything is written,
+        /// and stays in use where it is when the move cannot happen (for example
+        /// while an old client still runs). Runtime\ is rebuilt, so not moved.</summary>
+        internal static string Root()
+        {
+            if (root != null) return root;
+            string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string current = Path.Combine(local, "Husic"), legacy = Path.Combine(local, "Music");
+            root = current;
+#if !QA
+            if (HasData(current) || !HasData(legacy)) return root;
+            try
+            {
+                Directory.CreateDirectory(current);
+                if (Directory.Exists(Path.Combine(legacy, "WebView")))
+                    Directory.Move(Path.Combine(legacy, "WebView"), Path.Combine(current, "WebView"));
+                foreach (string name in new[] { "desktop.json", "window.json" })
+                    if (File.Exists(Path.Combine(legacy, name))) File.Move(Path.Combine(legacy, name), Path.Combine(current, name));
+            }
+            catch (IOException) { root = HasData(current) ? current : legacy; }
+            catch (UnauthorizedAccessException) { root = HasData(current) ? current : legacy; }
+#endif
+            return root;
+        }
+
+        private static bool HasData(string directory)
+        {
+            return File.Exists(Path.Combine(directory, "desktop.json")) || Directory.Exists(Path.Combine(directory, "WebView"));
+        }
     }
 
     public sealed class BuildSettings
@@ -25,7 +61,7 @@ namespace Hardware.Music
         public string LoginOrigin = "";
         internal static BuildSettings Load()
         {
-            BuildSettings settings = new JavaScriptSerializer().Deserialize<BuildSettings>(Resources.Text("Music.BuildSettings.json"));
+            BuildSettings settings = new JavaScriptSerializer().Deserialize<BuildSettings>(Resources.Text("Husic.BuildSettings.json"));
             if (settings == null || !NavigationPolicy.ValidOrigin(settings.ServerOrigin)
                 || (settings.LoginOrigin.Length > 0 && !NavigationPolicy.ValidOrigin(settings.LoginOrigin)))
                 throw new InvalidDataException("Invalid build origins");

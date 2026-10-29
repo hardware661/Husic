@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"music/internal/source"
+	"github.com/hardware661/husic/internal/source"
 )
 
 var recommendationOrder = []string{"netease", "qq", "kuwo", "kugou", "migu"}

@@ -35,8 +35,8 @@ function Presentation() {
       const node = document.querySelector<HTMLElement>('.content');
       if (node) scroll.current = { node, top: node.scrollTop, left: node.scrollLeft };
     };
-    window.addEventListener('music-before-presentation-suspend', capture);
-    return () => window.removeEventListener('music-before-presentation-suspend', capture);
+    window.addEventListener('husic-before-presentation-suspend', capture);
+    return () => window.removeEventListener('husic-before-presentation-suspend', capture);
   }, []);
   useLayoutEffect(() => {
     if (!visible || !scroll.current) return;

@@ -38,7 +38,7 @@ export function Cover({ src, size, className = '', alt = '', eager = false }: { 
   );
 }
 
-/** Up to four song covers in a 2×2 grid, the way Music draws playlists. */
+/** Up to four song covers in a 2×2 grid, the way Apple Music draws playlists. */
 export function Mosaic({ covers, cover, size }: { covers: string[]; cover?: string; size: number }) {
   if (cover) return <Cover src={cover} size={size} className="mosaic" />;
   if (covers.length < 4) return <Cover src={covers[0]} size={size} className="mosaic" />;
@@ -263,7 +263,7 @@ export function SongList({ items, numbered, showAlbum = true, onRemove, removeLa
   );
 }
 
-/** Three compact columns of songs, as on the approved home page study. */
+/** Three compact columns of songs, as on the home page. */
 export function SongGrid({ items, rows = 3 }: { items: Item[]; rows?: number }) {
   const { play, current } = usePlayer();
   return (
@@ -337,7 +337,7 @@ export function PageHeader({ title, children, search = true }: { title: string; 
     <header className={`page-header${compact ? ' is-compact' : ''}`}>
       <h1 className={compact ? 'sr-only' : undefined}>{title}</h1>
       {secondary ? <BackButton /> : <Link to="/settings" className="mobile-settings-logo" label="设置">
-        <img src="/brand/music-icon.svg?v=20261022-hardware-a" alt="" width={28} height={28} />
+        <img src="/brand/husic-icon.svg?v=0.2.0" alt="" width={28} height={28} />
       </Link>}
       <div className="page-actions">
         {children}

@@ -1,4 +1,4 @@
-// Typed calls to the Music server. Every song the app shows is an Item:
+// Typed calls to the Husic server. Every song the app shows is an Item:
 // library songs carry songId; search and recommendation results only carry
 // the platform copies they were found on.
 
@@ -66,7 +66,7 @@ export function remember<T>(key: string, value: T) {
   const entry = { at: Date.now(), value };
   memo.set(key, entry);
   try {
-    localStorage.setItem(`music:${key}`, JSON.stringify(entry));
+    localStorage.setItem(`husic:${key}`, JSON.stringify(entry));
   } catch {
     // storage full or blocked: memory is enough
   }
@@ -76,7 +76,7 @@ export function recall<T>(key: string): { at: number; value: T } | null {
   let entry = memo.get(key);
   if (!entry) {
     try {
-      const raw = localStorage.getItem(`music:${key}`);
+      const raw = localStorage.getItem(`husic:${key}`);
       if (raw) memo.set(key, (entry = JSON.parse(raw)));
     } catch {
       return null;

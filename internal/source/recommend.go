@@ -14,13 +14,9 @@ type Recommender interface {
 }
 
 func (p Migu) Recommend(ctx context.Context, limit int) ([]Track, error) {
-	h := p.RecommendHTTP
-	if h == nil {
-		h = p.HTTP
-	}
-	doc, err := h.getJSON(ctx, "https://app.c.nf.migu.cn/pc/resource-dataloader/recommend-song/v1.0", url.Values{
+	doc, err := p.HTTP.getJSON(ctx, "https://app.c.nf.migu.cn/pc/resource-dataloader/recommend-song/v1.0", url.Values{
 		"scene": {"TODAY_RECOMMEND"}, "action": {"1"}, "size": {strconv.Itoa(limit)},
-	}, map[string]string{"Referer": "https://music.migu.cn/", "User-Agent": "Mozilla/5.0", "deviceId": "music-personal-web"})
+	}, map[string]string{"Referer": "https://music.migu.cn/", "User-Agent": "Mozilla/5.0", "deviceId": "husic-web"})
 	if err != nil {
 		return nil, err
 	}

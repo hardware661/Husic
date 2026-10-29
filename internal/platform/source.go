@@ -4,7 +4,7 @@ import (
 	"context"
 	"strconv"
 
-	"music/internal/source"
+	"github.com/hardware661/husic/internal/source"
 )
 
 func (c *Client) Search(ctx context.Context, q string, limit int) ([]source.Track, error) {

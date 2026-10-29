@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
 
-namespace Hardware.Music
+namespace Husic.Desktop
 {
     internal sealed partial class DesktopForm
     {
@@ -121,7 +121,7 @@ namespace Hardware.Music
 
         // Keep WS_CAPTION/WS_THICKFRAME from FormBorderStyle.Sizable. Windows
         // still owns snap, resize, system shortcuts and minimize animations;
-        // only its painted caption is replaced by the Music surface.
+        // only its painted caption is replaced by the Husic surface.
         private bool HandleChromeMessage(ref Message message)
         {
             if (message.Msg == 0x0083 && message.WParam != IntPtr.Zero)
@@ -269,7 +269,7 @@ namespace Hardware.Music
             try
             {
                 Browser.CoreWebView2.PostWebMessageAsJson(new JavaScriptSerializer().Serialize(new {
-                    type = "music-desktop-state", version = "0.1.0", maximized = WindowState == FormWindowState.Maximized,
+                    type = "husic-desktop-state", version = "0.2.0", maximized = WindowState == FormWindowState.Maximized,
                     closeToTray = Preferences.CloseToTray, topmost = Preferences.Topmost, zoom = Preferences.Zoom, error = error
                     , lyricsEnabled = Preferences.LyricsEnabled, lyricsSecondaryEnabled = Preferences.LyricsSecondaryEnabled, lyricsLocked = Preferences.LyricsLocked, lyricsSize = Preferences.LyricsSize,
                     lyricsMinFont = Preferences.LyricsMinFont, lyricsMaxFont = Preferences.LyricsMaxFont, lyricsBackdrop = Preferences.LyricsBackdrop,

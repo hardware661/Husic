@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"music/internal/source"
+	"github.com/hardware661/husic/internal/source"
 )
 
 func (c *Client) Collections(ctx context.Context) ([]Collection, error) {

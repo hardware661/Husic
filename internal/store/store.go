@@ -1,4 +1,4 @@
-// Package store keeps the owner's library in PostgreSQL: songs and their
+// Package store keeps the library in PostgreSQL: songs and their
 // platform copies, likes, playlists and listening history.
 package store
 
@@ -15,7 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"music/internal/source"
+	"github.com/hardware661/husic/internal/source"
 )
 
 //go:embed migrations/*.sql
@@ -27,7 +27,7 @@ type Store struct {
 	db *pgxpool.Pool
 }
 
-// Song is a recording with every platform copy Music knows about.
+// Song is a recording with every platform copy Husic knows about.
 type Song struct {
 	ID       int64          `json:"id"`
 	Title    string         `json:"title"`

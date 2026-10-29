@@ -1,5 +1,5 @@
 const origin = 'http://127.0.0.1:18788';
-const key = 'music-youtube-attempt';
+const key = 'husic-youtube-attempt';
 const validID = (id) => typeof id === 'string' && /^[A-Za-z0-9_-]{32}$/.test(id);
 const isYouTube = (domain) => domain === 'youtube.com' || domain.endsWith('.youtube.com');
 
@@ -74,7 +74,7 @@ export async function handleRequest(message, sender) {
 
 if (globalThis.chrome?.runtime?.onMessage) {
   chrome.runtime.onMessage.addListener((message, sender, respond) => {
-    if (message?.type !== 'music-connect') return;
+    if (message?.type !== 'husic-connect') return;
     handleRequest(message, sender).then(respond).catch((error) => respond({ ok: false, error: ['login_incomplete', 'transfer_failed'].includes(error?.message) ? error.message : 'transfer_failed' }));
     return true;
   });

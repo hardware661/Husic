@@ -16,7 +16,7 @@ export function useDesktopLyrics(item: Item | null, audio: HTMLAudioElement, con
     const bridge = native();
     if (!bridge) return;
     const receive = (event: MessageEvent) => {
-      if (event.data?.type === 'music-desktop-state') setEnabled(event.data.lyricsEnabled === true);
+      if (event.data?.type === 'husic-desktop-state') setEnabled(event.data.lyricsEnabled === true);
     };
     bridge.addEventListener('message', receive);
     bridge.postMessage({ type: 'desktop-shell-ready' });
@@ -46,7 +46,7 @@ export function useDesktopLyrics(item: Item | null, audio: HTMLAudioElement, con
           state = 'synced';
         }
       }
-      const message = { type: 'music-lyrics', line: line.slice(0, 500), secondary: secondary.slice(0, 500), state };
+      const message = { type: 'husic-lyrics', line: line.slice(0, 500), secondary: secondary.slice(0, 500), state };
       const value = JSON.stringify(message);
       if (value !== previous) { previous = value; bridge.postMessage(message); }
     };

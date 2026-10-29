@@ -61,11 +61,11 @@ class BulkDownload(unittest.TestCase):
     def test_menu_below_real_desktop_controls_and_remains_clickable(self):
         self.open()
         desktop = Path(__file__).resolve().parents[2] / 'desktop'
-        origin = os.environ.get('MUSIC_TEST_URL', 'http://127.0.0.1:5190')
-        script = (desktop/'desktop-chrome.js').read_text().replace('__MUSIC_ORIGIN__', json.dumps(origin)).replace('__MUSIC_LOGIN_ORIGIN__', '""').replace('__MUSIC_DESKTOP_CSS__', json.dumps((desktop/'desktop-chrome.css').read_text()))
+        origin = os.environ.get('HUSIC_TEST_URL', 'http://127.0.0.1:5190')
+        script = (desktop/'desktop-chrome.js').read_text().replace('__HUSIC_ORIGIN__', json.dumps(origin)).replace('__HUSIC_LOGIN_ORIGIN__', '""').replace('__HUSIC_DESKTOP_CSS__', json.dumps((desktop/'desktop-chrome.css').read_text()))
         self.page.evaluate('window.chrome??={};window.chrome.webview={postMessage(){},addEventListener(){},removeEventListener(){}}')
         self.page.add_script_tag(content=script)
-        controls = self.page.locator('.music-window-controls'); controls.wait_for()
+        controls = self.page.locator('.husic-window-controls'); controls.wait_for()
         button = self.page.get_by_role('button', name='歌单操作', exact=True)
         window_box = controls.bounding_box(); menu_box = button.bounding_box()
         self.assertGreaterEqual(menu_box['y'], window_box['y']+window_box['height']+12)

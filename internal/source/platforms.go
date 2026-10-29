@@ -177,10 +177,7 @@ func (p Kuwo) Lyrics(ctx context.Context, t Track) (string, error) {
 }
 
 // Migu is Migu without an account, standard quality.
-type Migu struct {
-	HTTP          *HTTP
-	RecommendHTTP *HTTP // public web recommendations are reachable directly
-}
+type Migu struct{ HTTP *HTTP }
 
 func (Migu) Name() string { return "migu" }
 

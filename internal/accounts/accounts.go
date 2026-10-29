@@ -17,10 +17,10 @@ import (
 	"sync"
 	"time"
 
-	"music/internal/netease"
-	"music/internal/platform"
-	"music/internal/privatefile"
-	"music/internal/youtube"
+	"github.com/hardware661/husic/internal/netease"
+	"github.com/hardware661/husic/internal/platform"
+	"github.com/hardware661/husic/internal/privatefile"
+	"github.com/hardware661/husic/internal/youtube"
 )
 
 type NetEase interface {

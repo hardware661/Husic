@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"music/internal/store"
+	"github.com/hardware661/husic/internal/store"
 )
 
 func TestHomeLikesStableWithinRecommendationDay(t *testing.T) {

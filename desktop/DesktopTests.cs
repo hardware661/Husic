@@ -12,9 +12,9 @@ using System.Web.Script.Serialization;
 using System.Windows.Forms;
 using Microsoft.Web.WebView2.Core;
 
-namespace Hardware.Music
+namespace Husic.Desktop
 {
-    // Built only into Music.QA.exe. The shipping app has no test origins,
+    // Built only into Husic.QA.exe. The shipping app has no test origins,
     // profile override, arbitrary navigation or remote-debugging argument.
     internal static class DesktopTests
     {
@@ -40,7 +40,7 @@ namespace Hardware.Music
             string phase = args[1];
             string work = Path.GetDirectoryName(report);
             evidenceDirectory = work;
-            string localWork = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Music", "QA", Path.GetFileName(work));
+            string localWork = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Husic", "QA", Path.GetFileName(work));
             string fixtures = Path.Combine(localWork, "fixtures");
             Directory.CreateDirectory(fixtures);
             File.WriteAllText(Path.Combine(fixtures, "index.html"), Fixture());
@@ -48,10 +48,10 @@ namespace Hardware.Music
             if (String.IsNullOrWhiteSpace(webSource)) webSource = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "web", "src");
             webSource = Path.GetFullPath(webSource);
             foreach (string css in new string[] { "styles.css", "settings.css" }) File.Copy(Path.Combine(webSource, css), Path.Combine(fixtures, css), true);
-            File.WriteAllBytes(Path.Combine(fixtures, "brand.png"), Resources.Bytes("Music.Brand.png"));
+            File.WriteAllBytes(Path.Combine(fixtures, "brand.png"), Resources.Bytes("Husic.Brand.png"));
             using (AudioFixtureServer audioServer = phase == "audio" ? new AudioFixtureServer(fixtures) : null)
             {
-            DesktopOptions options = new DesktopOptions { Root = Path.Combine(localWork, "profile"), Origin = "https://music.desktop.test", Entry = "https://music.desktop.test/index.html", AppId = "com.hdwde.music.qa", FixtureDirectory = fixtures, Test = true };
+            DesktopOptions options = new DesktopOptions { Root = Path.Combine(localWork, "profile"), Origin = "https://music.desktop.test", Entry = "https://music.desktop.test/index.html", AppId = "Husic.Desktop.QA", FixtureDirectory = fixtures, Test = true };
             if (audioServer != null)
             {
                 options.Origin = audioServer.Origin;
@@ -85,7 +85,7 @@ namespace Hardware.Music
                             var cookie=form.Browser.CoreWebView2.CookieManager.CreateCookie("husic-gate-fixture","allowed","music.desktop.test","/");
                             cookie.IsSecure=true;cookie.IsHttpOnly=true;cookie.Expires=DateTime.UtcNow.AddDays(1);
                             form.Browser.CoreWebView2.CookieManager.AddOrUpdateCookie(cookie);
-                            await form.Browser.CoreWebView2.ExecuteScriptAsync("localStorage.setItem('music-reset-fixture','old');window.seedDone=false;const r=indexedDB.open('music-reset-fixture',1);r.onupgradeneeded=()=>r.result.createObjectStore('pictures');r.onsuccess=()=>{r.result.close();window.seedDone=true}");
+                            await form.Browser.CoreWebView2.ExecuteScriptAsync("localStorage.setItem('husic-reset-fixture','old');window.seedDone=false;const r=indexedDB.open('husic-reset-fixture',1);r.onupgradeneeded=()=>r.result.createObjectStore('pictures');r.onsuccess=()=>{r.result.close();window.seedDone=true}");
                             await UntilScript("window.seedDone",3000);
                             form.ChangeDesktopPreference("lyricsEnabled",true);form.ChangeDesktopPreference("zoom",1.25);
                             form.ChangeDesktopPreference("lyricsOrientation","vertical");
@@ -94,14 +94,14 @@ namespace Hardware.Music
                         }
                         else if(phase == "reset-verify") {
                             Assert(!form.Preferences.LyricsEnabled&&form.Preferences.Zoom==1&&form.Preferences.LyricsOrientation=="horizontal","native preferences reset");
-                            await UntilScript("localStorage.getItem('music-reset-fixture')===null",2000);
-                            await form.Browser.CoreWebView2.ExecuteScriptAsync("window.databasesGone=false;indexedDB.databases().then(d=>window.databasesGone=!d.some(x=>x.name==='music-reset-fixture'))");
+                            await UntilScript("localStorage.getItem('husic-reset-fixture')===null",2000);
+                            await form.Browser.CoreWebView2.ExecuteScriptAsync("window.databasesGone=false;indexedDB.databases().then(d=>window.databasesGone=!d.some(x=>x.name==='husic-reset-fixture'))");
                             await UntilScript("window.databasesGone",3000);
                             var cookies=await form.Browser.CoreWebView2.CookieManager.GetCookiesAsync(options.Origin);
                             Assert(cookies.Exists(c=>c.Name=="husic-gate-fixture"&&c.Value=="allowed"),"gate cookie preserved");
                             DesktopOptions publicOptions=new DesktopOptions();
                             Assert(publicOptions.Origin=="http://127.0.0.1:18788"&&publicOptions.LoginOrigin=="","public defaults have no private gate");
-                            Assert(!NavigationPolicy.Embedded("https://auth.hdwde.com/",publicOptions),"private gate not implicitly trusted");
+                            Assert(!NavigationPolicy.Embedded("https://login.example.com/",publicOptions),"login gate not implicitly trusted");
                             Assert(NavigationPolicy.OriginIs("http://127.0.0.1:18788/settings",publicOptions.Origin)&&!NavigationPolicy.OriginIs("http://127.0.0.1:18789/",publicOptions.Origin),"loopback port exact match");
                             Assert(!NavigationPolicy.ValidOrigin("http://example.com")&&!NavigationPolicy.OriginIs("https://user@music.desktop.test/",options.Origin),"unsafe origins rejected");
                             results["resetStorageAndPreferencesGateCookieRetained"]=true;results["publicDefaultIsSelfHosted"]=true;
@@ -462,8 +462,8 @@ namespace Hardware.Music
         private static async Task First(SingleInstance primary)
         {
             AssertDefaultWindow();
-            Assert(!NavigationPolicy.OriginIs("https://music-g1.hdwde.com.evil.test/", "https://music-g1.hdwde.com"), "lookalike origin rejected");
-            Assert(!NavigationPolicy.OriginIs("https://music-g1.hdwde.com:444/", "https://music-g1.hdwde.com"), "alternate origin port rejected");
+            Assert(!NavigationPolicy.OriginIs("https://music.example.com.evil.test/", "https://music.example.com"), "lookalike origin rejected");
+            Assert(!NavigationPolicy.OriginIs("https://music.example.com:444/", "https://music.example.com"), "alternate origin port rejected");
             Assert(!NavigationPolicy.External("file:///C:/Windows/System32/cmd.exe"), "custom/local protocol rejected");
             results["originBoundary"] = true;
             await Until(delegate { return form.MediaReady && form.SongTitle == "Fixture 1"; }, 4000);
@@ -511,10 +511,10 @@ namespace Hardware.Music
             Assert(form.Width == 980 && form.Height == 720, "tray restore keeps current-session size");
             results["trayRestoreKeepsSessionGeometry"] = true;
             Assert(await Number("window.fixtureAudioCount") == 1, "no second audio instance");
-            CoreWebView2Cookie cookie = form.Browser.CoreWebView2.CookieManager.CreateCookie("music_qa_session", "fixture-only", "music.desktop.test", "/");
+            CoreWebView2Cookie cookie = form.Browser.CoreWebView2.CookieManager.CreateCookie("husic_qa_session", "fixture-only", "music.desktop.test", "/");
             cookie.IsHttpOnly = true; cookie.IsSecure = true; cookie.Expires = DateTime.Now.AddDays(1);
             form.Browser.CoreWebView2.CookieManager.AddOrUpdateCookie(cookie);
-            await form.Browser.CoreWebView2.ExecuteScriptAsync("localStorage.setItem('music-qa-preference','dark');localStorage.setItem('music-qa-queue','saved')");
+            await form.Browser.CoreWebView2.ExecuteScriptAsync("localStorage.setItem('husic-qa-preference','dark');localStorage.setItem('husic-qa-queue','saved')");
             Assert(form.ChangeDesktopPreference("zoom", .85), "desktop zoom saved before reopen");
             Rectangle visible = WindowLayout.DefaultBounds();
             Assert(Screen.PrimaryScreen.WorkingArea.Contains(visible), "default window fits current work area");
@@ -541,9 +541,9 @@ namespace Hardware.Music
         {
             IList<CoreWebView2Cookie> cookies = await form.Browser.CoreWebView2.CookieManager.GetCookiesAsync(form.Options.Origin);
             bool found = false;
-            foreach (CoreWebView2Cookie cookie in cookies) if (cookie.Name == "music_qa_session" && cookie.IsHttpOnly && cookie.Value == "fixture-only") found = true;
+            foreach (CoreWebView2Cookie cookie in cookies) if (cookie.Name == "husic_qa_session" && cookie.IsHttpOnly && cookie.Value == "fixture-only") found = true;
             Assert(found, "HTTP-only login cookie survives process restart");
-            await UntilScript("localStorage.getItem('music-qa-preference') === 'dark' && localStorage.getItem('music-qa-queue') === 'saved'", 2000);
+            await UntilScript("localStorage.getItem('husic-qa-preference') === 'dark' && localStorage.getItem('husic-qa-queue') === 'saved'", 2000);
             AssertDefaultWindow();
             results["persistentLoginCookie"] = true;
             results["preferencesAndQueueSurvive"] = true;
@@ -594,7 +594,7 @@ namespace Hardware.Music
                 Assert(GetAncestor(WindowFromPoint(center), 2) == form.LyricsWindow.Handle, "unlocked lyric window accepts pointer input");
                 Assert(form.ChangeDesktopPreference("lyricsLocked", true), "lock lyric window");
                 await Task.Delay(100);
-                Assert(GetAncestor(WindowFromPoint(center), 2) == form.Handle, "locked lyric window actually passes pointer input to underlying Music window");
+                Assert(GetAncestor(WindowFromPoint(center), 2) == form.Handle, "locked lyric window actually passes pointer input to underlying Husic window");
                 // The menu remains a recovery path when the overlay is click-through.
                 ((ToolStripMenuItem)form.TrayMenu.Items[5]).PerformClick();
                 await Until(delegate { return !form.LyricsWindow.Locked; }, 1500);
@@ -726,22 +726,22 @@ namespace Hardware.Music
         private static async Task Chrome()
         {
             await DragWindow();
-            Assert(form.ClientSize.Height == form.Height && form.ClientSize.Width == form.Width, "system caption replaced by full Music surface");
-            await UntilScript("document.querySelectorAll('#music-window-controls button').length === 3 && !!document.querySelector('#music-desktop-settings')", 2500);
+            Assert(form.ClientSize.Height == form.Height && form.ClientSize.Width == form.Width, "system caption replaced by full Husic surface");
+            await UntilScript("document.querySelectorAll('#husic-window-controls button').length === 3 && !!document.querySelector('#husic-desktop-settings')", 2500);
             results["integratedWindowChrome"] = true;
             Point edge = form.PointToScreen(new Point(2, form.ClientSize.Height / 2));
             IntPtr packed = (IntPtr)((edge.X & 0xffff) | ((edge.Y & 0xffff) << 16));
             Assert(SendMessage(form.Handle, 0x0084, IntPtr.Zero, packed).ToInt32() == 10, "native resize hit zone survives custom frame");
-            await ClickWeb("#music-window-controls [data-command='maximize']");
+            await ClickWeb("#husic-window-controls [data-command='maximize']");
             await Until(delegate { return form.WindowState == FormWindowState.Maximized; }, 2000);
             await UntilScript("document.querySelector('[data-command=maximize]').getAttribute('aria-label') === '还原窗口'", 2000);
             Rectangle client = form.RectangleToScreen(form.ClientRectangle);
             Rectangle area = Screen.FromControl(form).WorkingArea;
             Assert(client.Left >= area.Left - 1 && client.Top >= area.Top - 1 && client.Right <= area.Right + 1 && client.Bottom <= area.Bottom + 1, "maximized content respects work area");
             results["maximizedWorkArea"] = true;
-            await ClickWeb("#music-window-controls [data-command='maximize']");
+            await ClickWeb("#husic-window-controls [data-command='maximize']");
             await Until(delegate { return form.WindowState == FormWindowState.Normal; }, 2000);
-            await ClickWeb("#music-window-controls [data-command='minimize']");
+            await ClickWeb("#husic-window-controls [data-command='minimize']");
             await Until(delegate { return form.WindowState == FormWindowState.Minimized; }, 2000);
             form.RestoreWindow();
             await Task.Delay(150);
@@ -754,17 +754,17 @@ namespace Hardware.Music
             await Until(delegate { return Math.Abs(form.Browser.ZoomFactor - 1.15) < .001; }, 1500);
             await ClickWeb("[data-zoom='reset']");
             await Until(delegate { return Math.Abs(form.Browser.ZoomFactor - 1) < .001; }, 1500);
-            await ClickWeb("input[name='music-desktop-close'][value='exit']");
+            await ClickWeb("input[name='husic-desktop-close'][value='exit']");
             await Until(delegate { return !form.Preferences.CloseToTray; }, 1500);
-            await ClickWeb("input[name='music-desktop-close'][value='tray']");
+            await ClickWeb("input[name='husic-desktop-close'][value='tray']");
             await Until(delegate { return form.Preferences.CloseToTray; }, 1500);
             Assert(!form.ChangeDesktopPreference("zoom", 8) && form.Preferences.Zoom == 1, "out-of-range desktop scale rejected");
             results["desktopSettingsUseRealControls"] = true;
             await form.Browser.CoreWebView2.ExecuteScriptAsync("window.fixtureDialog=document.createElement('dialog');fixtureDialog.innerHTML='<button>关闭测试对话框</button>';document.body.append(fixtureDialog);fixtureDialog.showModal()");
             await Task.Delay(120);
-            await ClickWeb("#music-window-controls [data-command='maximize']");
+            await ClickWeb("#husic-window-controls [data-command='maximize']");
             await Until(delegate { return form.WindowState == FormWindowState.Maximized; }, 1500);
-            await ClickWeb("#music-window-controls [data-command='maximize']");
+            await ClickWeb("#husic-window-controls [data-command='maximize']");
             await Until(delegate { return form.WindowState == FormWindowState.Normal; }, 1500);
             await form.Browser.CoreWebView2.ExecuteScriptAsync("fixtureDialog.close();fixtureDialog.remove()");
             results["captionAboveWebDialogs"] = true;
@@ -825,7 +825,7 @@ namespace Hardware.Music
                 Point start = form.PointToScreen(new Point(form.ClientSize.Width / 2, 18));
                 SetCursorPos(start.X, start.Y);
                 await Task.Delay(80);
-                Assert(GetAncestor(WindowFromPoint(start), 2) == form.Handle, "native drag input targets only the isolated Music window");
+                Assert(GetAncestor(WindowFromPoint(start), 2) == form.Handle, "native drag input targets only the isolated Husic window");
                 Rectangle before = form.Bounds;
                 mouse_event(0x0002, 0, 0, 0, UIntPtr.Zero);
                 await Task.Delay(80);
@@ -854,7 +854,7 @@ namespace Hardware.Music
                         Point from = form.PointToScreen(new Point(left ? 5 : right ? form.ClientSize.Width - 5 : form.ClientSize.Width / 2, top ? 5 : bottom ? form.ClientSize.Height - 5 : form.ClientSize.Height / 2));
                         SetCursorPos(from.X, from.Y);
                         await Task.Delay(120);
-                        Assert(GetAncestor(WindowFromPoint(from), 2) == form.Handle, "resize input targets only isolated Music");
+                        Assert(GetAncestor(WindowFromPoint(from), 2) == form.Handle, "resize input targets only isolated Husic");
                         mouse_event(0x0002, 0, 0, 0, UIntPtr.Zero);
                         await Task.Delay(160);
                         for (int step = 1; step <= 4; step++)
@@ -983,8 +983,8 @@ namespace Hardware.Music
 
         private static string Fixture()
         {
-            return @"<!doctype html><html><head><meta charset='utf-8'><title>Music isolated native checks</title><link rel='stylesheet' href='/styles.css'><link rel='stylesheet' href='/settings.css'></head><body>
-<div class='frame'><aside class='sidebar'><div class='brand'><img class='brand-mark' src='/brand.png'><strong>Music</strong></div><nav class='side-nav'><a>首页</a><a>发现</a><a>排行榜</a><a>音乐库</a></nav><nav class='side-nav side-settings'><a href='/settings'>设置</a></nav></aside><main class='content'><div class='page settings-page'><header class='page-header'><h1>设置</h1></header><div class='settings-intro'><img src='/brand.png' width='52' height='52'><div><strong>让音乐照你的习惯来。</strong><p>隔离的桌面交互检查，不使用真实账号或播放历史。</p></div></div><p class='settings-signature'>Music · hardware</p></div></main></div><script>
+            return @"<!doctype html><html><head><meta charset='utf-8'><title>Husic isolated native checks</title><link rel='stylesheet' href='/styles.css'><link rel='stylesheet' href='/settings.css'></head><body>
+<div class='frame'><aside class='sidebar'><div class='brand'><img class='brand-mark' src='/brand.png'><strong>Husic</strong></div><nav class='side-nav'><a>首页</a><a>发现</a><a>排行榜</a><a>音乐库</a></nav><nav class='side-nav side-settings'><a href='/settings'>设置</a></nav></aside><main class='content'><div class='page settings-page'><header class='page-header'><h1>设置</h1></header><div class='settings-intro'><img src='/brand.png' width='52' height='52'><div><strong>让音乐照你的习惯来。</strong><p>隔离的桌面交互检查，不使用真实账号或播放历史。</p></div></div><p class='settings-signature'>Husic</p></div></main></div><script>
 const bytes=new Uint8Array(44+8000*2*15),v=new DataView(bytes.buffer);
 function word(at,s){for(let i=0;i<s.length;i++)bytes[at+i]=s.charCodeAt(i)}
 word(0,'RIFF');v.setUint32(4,bytes.length-8,true);word(8,'WAVE');word(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,8000,true);v.setUint32(28,16000,true);v.setUint16(32,2,true);v.setUint16(34,16,true);word(36,'data');v.setUint32(40,bytes.length-44,true);
@@ -994,7 +994,7 @@ async function play(){await fixtureAudio.play();navigator.mediaSession.playbackS
 function pause(){fixtureAudio.pause();navigator.mediaSession.playbackState='paused'}
 navigator.mediaSession.setActionHandler('play',play);navigator.mediaSession.setActionHandler('pause',pause);
 navigator.mediaSession.setActionHandler('nexttrack',()=>{index++;metadata()});navigator.mediaSession.setActionHandler('previoustrack',()=>{index--;metadata()});metadata();navigator.mediaSession.playbackState='paused';window.fixtureReady=true;
-window.fixtureLyrics=()=>chrome.webview.postMessage({type:'music-lyrics',line:fixtureAudio.currentTime>=2?'第二句，把日子慢慢唱':'第一句，风从身边经过',secondary:'下一句 / 翻译',state:'synced'});fixtureAudio.addEventListener('timeupdate',fixtureLyrics);
+window.fixtureLyrics=()=>chrome.webview.postMessage({type:'husic-lyrics',line:fixtureAudio.currentTime>=2?'第二句，把日子慢慢唱':'第一句，风从身边经过',secondary:'下一句 / 翻译',state:'synced'});fixtureAudio.addEventListener('timeupdate',fixtureLyrics);
 </script></body></html>";
         }
     }

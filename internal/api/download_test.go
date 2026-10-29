@@ -15,8 +15,8 @@ import (
 	"strings"
 	"testing"
 
-	"music/internal/resolve"
-	"music/internal/source"
+	"github.com/hardware661/husic/internal/resolve"
+	"github.com/hardware661/husic/internal/source"
 )
 
 type downloadProvider struct{ kind, address string }

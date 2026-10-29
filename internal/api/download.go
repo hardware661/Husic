@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"music/internal/resolve"
+	"github.com/hardware661/husic/internal/resolve"
 )
 
 const maxDownloadBytes int64 = 512 << 20

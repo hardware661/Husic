@@ -15,7 +15,7 @@ func LRCLib(ctx context.Context, client *http.Client, title, artist string, seco
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("User-Agent", "Music (personal player; hdwde.com)")
+	req.Header.Set("User-Agent", "Husic (+https://github.com/hardware661/Husic)")
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err

@@ -9,7 +9,7 @@ let suspended = false;
 let visible = !document.hidden;
 function update() {
   const next = !document.hidden && !suspended;
-  if (visible && !next) window.dispatchEvent(new Event('music-before-presentation-suspend'));
+  if (visible && !next) window.dispatchEvent(new Event('husic-before-presentation-suspend'));
   document.documentElement.toggleAttribute('data-page-hidden', !next);
   if (visible === next) return;
   visible = next;

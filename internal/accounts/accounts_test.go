@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"music/internal/netease"
-	"music/internal/youtube"
+	"github.com/hardware661/husic/internal/netease"
+	"github.com/hardware661/husic/internal/youtube"
 )
 
 func TestGuestSeedCanReconnectAndRestore(t *testing.T) {

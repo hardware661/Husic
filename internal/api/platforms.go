@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"music/internal/platform"
+	"github.com/hardware661/husic/internal/platform"
 )
 
 type PlatformLibrary interface {

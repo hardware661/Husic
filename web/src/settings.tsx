@@ -20,12 +20,12 @@ function connector(action: 'ping' | 'start' | 'complete' | 'cancel', id = ''): P
     const requestId = crypto.randomUUID();
     const finish = (reply: BridgeReply) => { clearTimeout(timer); window.removeEventListener('message', receive); resolve(reply); };
     const receive = (event: MessageEvent) => {
-      if (event.source !== window || event.origin !== location.origin || event.data?.type !== 'MUSIC_CONNECT_RESPONSE' || event.data.requestId !== requestId) return;
+      if (event.source !== window || event.origin !== location.origin || event.data?.type !== 'HUSIC_CONNECT_RESPONSE' || event.data.requestId !== requestId) return;
       finish(event.data.result);
     };
     const timer = window.setTimeout(() => finish({ ok: false, error: 'extension_missing' }), action === 'complete' ? 45000 : action === 'ping' ? 1200 : 12000);
     window.addEventListener('message', receive);
-    window.postMessage({ type: 'MUSIC_CONNECT_REQUEST', requestId, action, id }, location.origin);
+    window.postMessage({ type: 'HUSIC_CONNECT_REQUEST', requestId, action, id }, location.origin);
   });
 }
 
@@ -207,7 +207,7 @@ export function Settings() {
       {attempt && <div className="connection-actions"><button className="pill primary" onClick={completeYouTube} disabled={busy !== '' || attempt.state !== 'waiting'}>{busy === 'verify' ? '正在验证…' : '已完成登录，接回 Husic'}</button>{attempt.state !== 'waiting' && <button className="pill" onClick={startYouTube}>重新开始</button>}</div>}
     </Dialog>}
     {dialog === 'extension' && <Dialog title="首次连接准备" onClose={close}>
-      <div className="connection-actions"><a className="pill" href="/connect/Music-Connect.zip" download>下载扩展</a><button className="pill primary" onClick={startYouTube} disabled={busy !== ''}>已安装，继续连接</button></div>
+      <div className="connection-actions"><a className="pill" href="/connect/Husic-Connect.zip" download>下载扩展</a><button className="pill primary" onClick={startYouTube} disabled={busy !== ''}>已安装，继续连接</button></div>
     </Dialog>}
   </div>;
 }

@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"music/internal/source"
+	"github.com/hardware661/husic/internal/source"
 )
 
 // Result is one recording and every platform copy the search turned up.

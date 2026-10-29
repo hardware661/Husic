@@ -9,8 +9,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/hardware661/husic/internal/platform"
 	"github.com/skip2/go-qrcode"
-	"music/internal/platform"
 )
 
 type fakePlatform struct {

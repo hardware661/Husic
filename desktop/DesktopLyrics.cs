@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-namespace Hardware.Music
+namespace Husic.Desktop
 {
     internal sealed class DesktopLyrics : Form
     {

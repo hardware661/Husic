@@ -6,11 +6,11 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-namespace Hardware.Music
+namespace Husic.Desktop
 {
     // A single native popup: no extra browser, player, network request or timer.
     // ContextMenuStrip retains outside-click dismissal and the OS menu lifetime.
-    internal sealed class MusicTrayMenu : ContextMenuStrip
+    internal sealed class TrayMenu : ContextMenuStrip
     {
         private readonly Action<string> onCommand;
         private readonly TrackHeader header;
@@ -37,7 +37,7 @@ namespace Hardware.Music
         [DllImport("shcore.dll")] private static extern int GetDpiForMonitor(IntPtr monitor, int type, out uint x, out uint y);
         [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
 
-        internal MusicTrayMenu(Action<string> onCommand)
+        internal TrayMenu(Action<string> onCommand)
         {
             if (onCommand == null) throw new ArgumentNullException("onCommand");
             this.onCommand = onCommand;
@@ -347,19 +347,19 @@ namespace Hardware.Music
 
         private sealed class TrackHeader : Control
         {
-            private readonly MusicTrayMenu menu;
+            private readonly TrayMenu menu;
             private readonly Image brand;
             private Image artwork;
             private string detail = "";
             internal string Title { get; private set; }
-            internal TrackHeader(MusicTrayMenu menu)
+            internal TrackHeader(TrayMenu menu)
             {
                 this.menu = menu;
                 SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
                 SetStyle(ControlStyles.Selectable, false);
                 TabStop = false;
                 AccessibleRole = AccessibleRole.StaticText;
-                using (MemoryStream stream = new MemoryStream(Resources.Bytes("Music.Brand.png")))
+                using (MemoryStream stream = new MemoryStream(Resources.Bytes("Husic.Brand.png")))
                 using (Image source = Image.FromStream(stream)) brand = new Bitmap(source);
             }
             internal void UpdateTrack(string title, string artist, bool ready, bool playing)
@@ -402,10 +402,10 @@ namespace Hardware.Music
 
         private sealed class PlaybackRow : Panel
         {
-            private readonly MusicTrayMenu menu;
+            private readonly TrayMenu menu;
             private readonly MediaButton[] buttons;
             private readonly ToolTip tips = new ToolTip { InitialDelay = 450, ReshowDelay = 80, AutoPopDelay = 3000 };
-            internal PlaybackRow(MusicTrayMenu menu)
+            internal PlaybackRow(TrayMenu menu)
             {
                 this.menu = menu;
                 AccessibleName = "播放控制";
@@ -436,11 +436,11 @@ namespace Hardware.Music
 
         private sealed class MediaButton : Button
         {
-            private readonly MusicTrayMenu menu;
+            private readonly TrayMenu menu;
             private readonly int index;
             private bool hover;
             private bool pressed;
-            internal MediaButton(MusicTrayMenu menu, int index)
+            internal MediaButton(TrayMenu menu, int index)
             {
                 this.menu = menu;
                 this.index = index;
@@ -506,8 +506,8 @@ namespace Hardware.Music
 
         private sealed class MenuRenderer : ToolStripRenderer
         {
-            private readonly MusicTrayMenu menu;
-            internal MenuRenderer(MusicTrayMenu menu) { this.menu = menu; }
+            private readonly TrayMenu menu;
+            internal MenuRenderer(TrayMenu menu) { this.menu = menu; }
             protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e) { e.Graphics.Clear(menu.colors.Background); }
             protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e)
             {

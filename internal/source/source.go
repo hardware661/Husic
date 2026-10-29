@@ -27,7 +27,7 @@ type Track struct {
 	Duration int               `json:"duration"` // seconds, 0 if unknown
 	Cover    string            `json:"cover,omitempty"`
 	Extra    map[string]string `json:"extra,omitempty"`
-	Pinned   bool              `json:"pinned,omitempty"` // the owner chose this copy
+	Pinned   bool              `json:"pinned,omitempty"` // the listener chose this copy
 }
 
 // Ref is the "source:id" key of a track.

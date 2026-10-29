@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"music/internal/source"
+	"github.com/hardware661/husic/internal/source"
 )
 
 var (
@@ -52,7 +52,7 @@ type CollectionPage struct {
 }
 
 // Client is the Bilibili adapter: anonymous search and playback, plus the
-// owner's favourites once an account is connected.
+// account's favourites once one is connected.
 type Client struct {
 	direct       *http.Client
 	mediaHTTP    *http.Client

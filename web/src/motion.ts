@@ -106,13 +106,13 @@ export function useArtworkFlight(open: boolean, track: string, playing: boolean,
     const finish = () => active.current?.finish();
     const visibility = () => { if (document.hidden) finish(); };
     reduced.addEventListener('change', finish);
-    window.addEventListener('music-preferences-change', finish);
+    window.addEventListener('husic-preferences-change', finish);
     document.addEventListener('visibilitychange', visibility);
     window.addEventListener('resize', finish);
     window.addEventListener('blur', finish);
     window.addEventListener('pagehide', finish);
     document.addEventListener('freeze', finish);
-    return () => { finish(); reduced.removeEventListener('change', finish); window.removeEventListener('music-preferences-change', finish); document.removeEventListener('visibilitychange', visibility); window.removeEventListener('resize', finish); window.removeEventListener('blur', finish); window.removeEventListener('pagehide', finish); document.removeEventListener('freeze', finish); };
+    return () => { finish(); reduced.removeEventListener('change', finish); window.removeEventListener('husic-preferences-change', finish); document.removeEventListener('visibilitychange', visibility); window.removeEventListener('resize', finish); window.removeEventListener('blur', finish); window.removeEventListener('pagehide', finish); document.removeEventListener('freeze', finish); };
   }, []);
 }
 
@@ -170,13 +170,13 @@ export function usePageMotion(main: HTMLElement | null, path: string) {
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     const simplify = () => { if (reduceMotion()) animations.forEach((a) => a.cancel()); };
     reduced.addEventListener('change', simplify);
-    window.addEventListener('music-preferences-change', simplify);
+    window.addEventListener('husic-preferences-change', simplify);
     document.addEventListener('visibilitychange', visibility); visibility();
     return () => {
       observer.disconnect(); mutations.disconnect(); cancelAnimationFrame(pending);
       animations.forEach((a) => a.cancel());
       document.removeEventListener('visibilitychange', visibility); reduced.removeEventListener('change', simplify);
-      window.removeEventListener('music-preferences-change', simplify);
+      window.removeEventListener('husic-preferences-change', simplify);
     };
   }, [main, path, visible]);
 }

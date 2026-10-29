@@ -1,4 +1,4 @@
-module music
+module github.com/hardware661/husic
 
 go 1.26.0
 

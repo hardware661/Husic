@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hardware661/husic/internal/source"
 	"github.com/skip2/go-qrcode"
-	"music/internal/source"
 )
 
 var bvidPattern = regexp.MustCompile(`^BV[0-9A-Za-z]{10}$`)

@@ -25,7 +25,7 @@ export function Discover() {
       .finally(() => setBusy(false));
   }, []);
   useEffect(() => {
-    // A batch from the last few minutes is still new to the owner; keep it.
+    // A batch from the last few minutes is still new to the listener; keep it.
     const last = recall<DiscoverData>('discover:multi');
     if (!last || Date.now() - last.at > 10 * 60 * 1000) load();
   }, [load]);
@@ -177,7 +177,7 @@ const spots: [number, number][] = [
   [0.36, 28], [0.7, 64], [0.52, 118], [0.83, 156], [0.3, 205], [0.66, 236], [0.86, 292], [0.48, 322],
 ];
 
-/** New songs picked for the owner as blips on a sweeping radar scope. */
+/** New songs picked for the listener as blips on a sweeping radar scope. */
 function Radar({ items }: { items: Pick[] }) {
   const { play, current } = usePlayer();
   const [hovered, setHovered] = useState<number | null>(null);
@@ -238,7 +238,7 @@ function Radar({ items }: { items: Pick[] }) {
   );
 }
 
-/** Songs like one the owner loves, as a home-made mixtape with its J-card. */
+/** Songs like one the listener loves, as a home-made mixtape with its J-card. */
 function Mixtape({ seed, songs }: { seed: Item; songs: Pick[] }) {
   const { play, current, playing } = usePlayer();
   const live = playing && current !== null && songs.some((s) => sameItem(current, s));

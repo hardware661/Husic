@@ -1,6 +1,6 @@
 """Real browser coverage for equal blind-listening cells, mobile player and sleep timer.
 
-Run with an isolated frontend: MUSIC_TEST_URL=http://127.0.0.1:5194 python3 web/tests/test_mobile.py.
+Run with an isolated frontend: HUSIC_TEST_URL=http://127.0.0.1:5194 python3 web/tests/test_mobile.py.
 Existing playlist/control checks are inherited as the player is shared with them.
 """
 import json
@@ -40,7 +40,7 @@ class Mobile(fixtures.Controls):
         route.fulfill(content_type='application/json', body=json.dumps(data))
 
     def open(self,path='/playlist/1'):
-        self.page.goto(os.environ.get('MUSIC_TEST_URL','http://127.0.0.1:5194')+path)
+        self.page.goto(os.environ.get('HUSIC_TEST_URL','http://127.0.0.1:5194')+path)
         self.page.locator({'/':'.crate','/discover':'.discover-opening'}.get(path,'.collection-header,.download-manager-page')).first.wait_for(timeout=8000)
 
     def phone(self, width=390):
@@ -106,7 +106,7 @@ class Mobile(fixtures.Controls):
 
     def test_sleep_timer_pauses_from_another_page_and_does_not_skip_after_expiry(self):
         self.phone(); self.play(); self.set_duration()
-        self.page.goto(os.environ.get('MUSIC_TEST_URL','http://127.0.0.1:5194') + '/')
+        self.page.goto(os.environ.get('HUSIC_TEST_URL','http://127.0.0.1:5194') + '/')
         # The absolute deadline survives navigation/reload and can no longer auto-start audio.
         self.page.wait_for_timeout(2200)
         self.page.locator('.crate-row .sleeve').first.click()
@@ -161,8 +161,8 @@ class Mobile(fixtures.Controls):
         from pathlib import Path
         self.open('/')
         desktop=Path(__file__).resolve().parents[2]/'desktop'
-        origin=os.environ.get('MUSIC_TEST_URL','http://127.0.0.1:5194')
-        script=(desktop/'desktop-chrome.js').read_text().replace('__MUSIC_ORIGIN__',json.dumps(origin)).replace('__MUSIC_LOGIN_ORIGIN__','""').replace('__MUSIC_DESKTOP_CSS__',json.dumps((desktop/'desktop-chrome.css').read_text()))
+        origin=os.environ.get('HUSIC_TEST_URL','http://127.0.0.1:5194')
+        script=(desktop/'desktop-chrome.js').read_text().replace('__HUSIC_ORIGIN__',json.dumps(origin)).replace('__HUSIC_LOGIN_ORIGIN__','""').replace('__HUSIC_DESKTOP_CSS__',json.dumps((desktop/'desktop-chrome.css').read_text()))
         self.page.evaluate('window.chrome??={};window.chrome.webview={postMessage(){},addEventListener(){},removeEventListener(){}}')
         self.page.add_script_tag(content=script)
         dialog=self.timer()

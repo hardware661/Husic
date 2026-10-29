@@ -37,7 +37,7 @@ function WindowPreview({ theme }: { theme: Preferences['theme'] }) {
 export function AppearancePicker({ value, onChange }: { value: Preferences['theme']; onChange: (value: Preferences['theme']) => void }) {
   return <fieldset className="appearance-choices" aria-label="外观">
     {themes.map((theme) => <label key={theme.value} className={`appearance-option${value === theme.value ? ' is-selected' : ''}`}>
-      <input type="radio" name="music-appearance" value={theme.value} checked={value === theme.value} onChange={() => onChange(theme.value)} />
+      <input type="radio" name="husic-appearance" value={theme.value} checked={value === theme.value} onChange={() => onChange(theme.value)} />
       <WindowPreview theme={theme.value} />
       <span className="appearance-caption"><span>{theme.label}</span><span className="appearance-check"><Icon name="check" size={10} /></span></span>
     </label>)}
@@ -51,8 +51,8 @@ export function MotionPicker({ value, onChange }: { value: Preferences['motion']
   const keyboard = useRef(false);
   useEffect(() => {
     const stop = () => animations.current.forEach((animation) => animation.cancel());
-    window.addEventListener('music-preferences-change', stop);
-    return () => { stop(); window.removeEventListener('music-preferences-change', stop); };
+    window.addEventListener('husic-preferences-change', stop);
+    return () => { stop(); window.removeEventListener('husic-preferences-change', stop); };
   }, []);
   const preview = (next = value) => {
     animations.current.forEach((animation) => animation.cancel());
@@ -73,7 +73,7 @@ export function MotionPicker({ value, onChange }: { value: Preferences['motion']
     <fieldset className="motion-choices" aria-label="动态效果" data-reduced={value === 'reduced'} onPointerDown={(event) => { keyboard.current = false; delete event.currentTarget.dataset.keyboard; }} onKeyDown={(event) => { keyboard.current = true; event.currentTarget.dataset.keyboard = 'true'; }}>
       <span className="motion-choice-highlight" aria-hidden="true" />
       {[{ value: 'system', label: '标准动效' }, { value: 'reduced', label: '减少动效' }].map((option) => <label key={option.value} className={value === option.value ? 'is-selected' : ''}>
-        <input type="radio" name="music-motion" value={option.value} checked={value === option.value} onChange={() => select(option.value as Preferences['motion'])} />
+        <input type="radio" name="husic-motion" value={option.value} checked={value === option.value} onChange={() => select(option.value as Preferences['motion'])} />
         <span>{option.label}</span>
       </label>)}
     </fieldset>

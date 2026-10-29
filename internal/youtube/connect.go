@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"music/internal/privatefile"
-	"music/internal/source"
+	"github.com/hardware661/husic/internal/privatefile"
+	"github.com/hardware661/husic/internal/source"
 )
 
 type ConnectionStatus struct {

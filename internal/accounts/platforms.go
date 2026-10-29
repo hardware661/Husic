@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"music/internal/platform"
-	"music/internal/privatefile"
+	"github.com/hardware661/husic/internal/platform"
+	"github.com/hardware661/husic/internal/privatefile"
 )
 
 func platformKind(kind string) bool {
