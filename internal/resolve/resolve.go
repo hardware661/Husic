@@ -7,6 +7,7 @@ import (
 	"cmp"
 	"context"
 	"errors"
+	"net"
 	"slices"
 	"strings"
 	"sync"
@@ -26,6 +27,7 @@ type Resolver struct {
 	rank      map[string]int
 	order     []string
 	links     Linker
+	total     time.Duration // the whole search for one song
 
 	mu    sync.Mutex
 	cache map[string]cached
@@ -39,9 +41,13 @@ type cached struct {
 // Signed addresses last 20 minutes on the shortest-lived platform.
 const cacheFor = 10 * time.Minute
 
+// ErrUnreachable means some platform did not answer in time, so the song
+// may still be playable later; it is not the same as ErrUnavailable.
+var ErrUnreachable = errors.New("music platforms did not answer in time")
+
 // New tries providers in the order given. links may be nil.
 func New(providers []source.Provider, links Linker) *Resolver {
-	r := &Resolver{providers: map[string]source.Provider{}, rank: map[string]int{}, links: links, cache: map[string]cached{}}
+	r := &Resolver{providers: map[string]source.Provider{}, rank: map[string]int{}, links: links, cache: map[string]cached{}, total: 40 * time.Second}
 	for i, p := range providers {
 		r.providers[p.Name()] = p
 		r.rank[p.Name()] = i
@@ -56,6 +62,16 @@ func (r *Resolver) Order() []string { return slices.Clone(r.order) }
 // Resolve returns the copy that played and its stream. songID 0 means the
 // song is not in the library, so new copies are not recorded.
 func (r *Resolver) Resolve(ctx context.Context, songID int64, want source.Track, copies []source.Track, rejected ...string) (source.Track, source.Stream, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.total)
+	defer cancel()
+	unreachable := false
+	try := func(t source.Track) (source.Stream, bool) {
+		stream, err := r.stream(ctx, t)
+		if errors.Is(err, ErrUnreachable) {
+			unreachable = true
+		}
+		return stream, err == nil
+	}
 	blocked := make(map[string]bool, len(rejected))
 	for _, ref := range rejected {
 		blocked[ref] = true
@@ -77,7 +93,7 @@ func (r *Resolver) Resolve(ctx context.Context, songID int64, want source.Track,
 			continue
 		}
 		tried[t.Source] = true
-		if stream, err := r.stream(ctx, t); err == nil {
+		if stream, ok := try(t); ok {
 			return t, stream, nil
 		}
 	}
@@ -85,12 +101,15 @@ func (r *Resolver) Resolve(ctx context.Context, songID int64, want source.Track,
 		if blocked[t.Ref()] {
 			continue
 		}
-		if stream, err := r.stream(ctx, t); err == nil {
+		if stream, ok := try(t); ok {
 			if songID != 0 && r.links != nil {
 				_ = r.links.LinkTrack(context.WithoutCancel(ctx), songID, t)
 			}
 			return t, stream, nil
 		}
+	}
+	if unreachable || ctx.Err() != nil {
+		return source.Track{}, source.Stream{}, ErrUnreachable
 	}
 	return source.Track{}, source.Stream{}, source.ErrUnavailable
 }
@@ -118,11 +137,18 @@ func (r *Resolver) stream(ctx context.Context, t source.Track) (source.Stream, e
 	if slow, ok := p.(interface{ Budget() time.Duration }); ok {
 		budget = slow.Budget()
 	}
-	ctx, cancel := context.WithTimeout(ctx, budget)
+	if ctx.Err() != nil {
+		return source.Stream{}, ErrUnreachable
+	}
+	call, cancel := context.WithTimeout(ctx, budget)
 	defer cancel()
-	stream, err := p.Stream(ctx, t)
+	stream, err := p.Stream(call, t)
 	if err == nil && t.Duration > 0 && stream.Seconds > 0 && stream.Seconds < t.Duration-6 {
 		err = source.ErrUnavailable // a preview clip, not the song
+	}
+	if err != nil && (call.Err() != nil || isTimeout(err)) {
+		// Slow networks say nothing about the copy; do not mark it broken.
+		return source.Stream{}, ErrUnreachable
 	}
 	if r.links != nil {
 		reason := ""
@@ -191,6 +217,11 @@ func (r *Resolver) Forget(ref string) {
 			provider.Forget(id)
 		}
 	}
+}
+
+func isTimeout(err error) bool {
+	var netErr net.Error
+	return errors.Is(err, context.DeadlineExceeded) || errors.As(err, &netErr) && netErr.Timeout()
 }
 
 // IsUnavailable reports whether err means "no platform will play it".

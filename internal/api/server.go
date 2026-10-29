@@ -268,8 +268,24 @@ func (s *Server) cached(ctx context.Context, key string, ttl time.Duration, load
 	}
 	s.cacheMu.Lock()
 	s.cache[key] = cacheEntry{value: value, until: time.Now().Add(ttl)}
+	if len(s.cache) > cacheSweepSize {
+		s.sweepLocked()
+	}
 	s.cacheMu.Unlock()
 	return value, nil
+}
+
+// Keys include per-song and per-day parts, so the map would only grow.
+// Answers a day past their time are no longer useful even as stale ones.
+const cacheSweepSize = 2048
+
+func (s *Server) sweepLocked() {
+	cutoff := time.Now().Add(-24 * time.Hour)
+	for key, entry := range s.cache {
+		if entry.until.Before(cutoff) && !entry.refreshing {
+			delete(s.cache, key)
+		}
+	}
 }
 
 // peek returns a cached answer, fresh or stale, without loading anything.

@@ -2,7 +2,9 @@ package resolve
 
 import (
 	"context"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/hardware661/husic/internal/source"
 )
@@ -38,5 +40,57 @@ func TestRejectedCopyIsNotRetriedOrRediscovered(t *testing.T) {
 	_, _, err = r.Resolve(context.Background(), 0, a, nil, a.Ref(), b.Ref())
 	if err == nil || bad.calls != 0 {
 		t.Fatalf("rejected copies were rediscovered: calls=%d err=%v", bad.calls, err)
+	}
+}
+
+type slowProvider struct{ name string }
+
+func (p slowProvider) Name() string { return p.name }
+func (p slowProvider) Search(ctx context.Context, _ string, _ int) ([]source.Track, error) {
+	<-ctx.Done()
+	return nil, ctx.Err()
+}
+func (p slowProvider) Stream(ctx context.Context, _ source.Track) (source.Stream, error) {
+	<-ctx.Done()
+	return source.Stream{}, ctx.Err()
+}
+
+type marks struct {
+	mu      sync.Mutex
+	reasons map[string]string
+}
+
+func (m *marks) LinkTrack(context.Context, int64, source.Track) error { return nil }
+func (m *marks) MarkSource(_ context.Context, src, id string, ok bool, reason string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.reasons[src+":"+id] = reason
+	return nil
+}
+
+func TestUnreachablePlatformsAreBoundedAndNotBlamed(t *testing.T) {
+	providers := []source.Provider{slowProvider{"netease"}, slowProvider{"qq"}, slowProvider{"kuwo"}, slowProvider{"kugou"}}
+	m := &marks{reasons: map[string]string{}}
+	r := New(providers, m)
+	r.total = 300 * time.Millisecond
+	want := source.Track{Title: "Song", Artists: []string{"Artist"}, Duration: 200}
+	var copies []source.Track
+	for _, p := range providers {
+		c := want
+		c.Source, c.ID = p.Name(), "1"
+		copies = append(copies, c)
+	}
+	start := time.Now()
+	_, _, err := r.Resolve(context.Background(), 0, want, copies)
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Fatalf("resolve took %s with a 300ms budget", elapsed)
+	}
+	if err == nil || IsUnavailable(err) {
+		t.Fatalf("timeouts must not read as 'no platform has it': %v", err)
+	}
+	for ref, reason := range m.reasons {
+		if reason != "" {
+			t.Errorf("%s was marked broken (%q) for a timeout", ref, reason)
+		}
 	}
 }

@@ -86,8 +86,10 @@ type songPool struct {
 }
 
 // beijingDay names the NetEase day, which rolls over at 06:00 Beijing time.
-func beijingDay() string {
-	return time.Now().Add(2 * time.Hour).In(time.FixedZone("CST", 8*3600)).Format("2006-01-02")
+func beijingDay() string { return netEaseDay(time.Now()) }
+
+func netEaseDay(at time.Time) string {
+	return at.In(time.FixedZone("CST", 8*3600)).Add(-6 * time.Hour).Format("2006-01-02")
 }
 
 func (s *Server) pools() map[string]songPool {

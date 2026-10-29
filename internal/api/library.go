@@ -65,6 +65,10 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 			fail(w, http.StatusNotFound, "unavailable")
 			return
 		}
+		if errors.Is(err, resolve.ErrUnreachable) {
+			fail(w, http.StatusGatewayTimeout, "音乐平台暂时没有响应，请稍后再试")
+			return
+		}
 		fail(w, http.StatusBadGateway, err.Error())
 		return
 	}
@@ -72,6 +76,8 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 		"url": stream.URL, "source": t.Source, "id": t.ID, "bitrate": stream.Bitrate, "format": stream.Format,
 	})
 }
+
+var errNoLyrics = errors.New("no lyrics")
 
 func (s *Server) lyrics(w http.ResponseWriter, r *http.Request) {
 	var req struct {
@@ -83,7 +89,18 @@ func (s *Server) lyrics(w http.ResponseWriter, r *http.Request) {
 	}
 	item := req.Item
 	key := "lyrics:" + item.Title + "|" + strings.Join(item.Artists, "/") + "|" + strconv.Itoa(item.Duration)
-	value, err := s.cached(r.Context(), key, time.Hour, func(ctx context.Context) (any, error) { return s.findLyrics(ctx, item), nil })
+	// Only found lyrics are cached: a miss may be a passing upstream failure.
+	value, err := s.cached(r.Context(), key, time.Hour, func(ctx context.Context) (any, error) {
+		found := s.findLyrics(ctx, item)
+		if len(found.Lines) == 0 {
+			return found, errNoLyrics
+		}
+		return found, nil
+	})
+	if errors.Is(err, errNoLyrics) {
+		writeJSON(w, http.StatusOK, lyrics.Lyrics{Lines: []lyrics.Line{}})
+		return
+	}
 	if err != nil {
 		fail(w, http.StatusBadGateway, err.Error())
 		return
