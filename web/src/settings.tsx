@@ -9,8 +9,6 @@ import { Personalization } from './personalization';
 import { toast } from './toast';
 import { Link } from './router';
 import { SleepTimerControl } from './sleep-timer-control';
-import { playbackDiagnostics } from './playback-diagnostics';
-import { NativeAudioControl } from './native-audio-control';
 
 const qrNames: Record<QRKind, string> = { netease: '网易云', qq: 'QQ 音乐', bilibili: 'B 站', kugou: '酷狗音乐' };
 const qrApps: Record<QRKind, string> = { netease: '网易云音乐', qq: 'QQ', bilibili: '哔哩哔哩', kugou: '酷狗音乐' };
@@ -199,11 +197,6 @@ export function Settings() {
       <div className="preference-panel"><div className="preference-heading"><strong>动态效果</strong></div><MotionPicker value={preferences.motion} onChange={(value) => setPreference('motion', value)} /></div>
     </div></section>
     <p className="settings-signature">Husic <span>·</span> hardware</p>
-    <p className="settings-signature"><button className="text-button" onClick={async () => {
-      try { await navigator.clipboard.writeText(playbackDiagnostics()); toast('播放诊断已复制，只包含本机播放状态'); }
-      catch { toast('复制没有完成，请重试'); }
-    }}>复制播放诊断</button></p>
-    <NativeAudioControl />
     {isQR(dialog) && <Dialog title={`连接${dialog === 'netease' ? '' : ' '}${qrNames[dialog]}`} onClose={close}>
       <div className="qr-stage" aria-live="polite">{busy === dialog ? <span>正在准备二维码…</span> : attempt?.kind === dialog && ['waiting', 'scanned'].includes(attempt.state) ? <img width={256} height={256} src={`/api/accounts/${dialog}/login/${encodeURIComponent(attempt.id)}/qr`} alt={`${qrNames[dialog]}登录二维码`} /> : <span>{attempt?.state === 'expired' ? '二维码已过期' : attempt?.message || '二维码尚未准备好'}</span>}</div>
       <p className="connection-progress" role="status">{attempt?.state === 'scanned' ? `已扫码，请在${qrApps[dialog]}中确认` : message || attempt?.message || (attempt?.state === 'expired' ? '这次二维码已结束，请重新开始' : '等待扫码确认')}</p>

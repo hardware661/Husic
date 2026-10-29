@@ -6,7 +6,6 @@ import { useDesktopLyrics } from './desktop-lyrics';
 import { localAudioID, localAudioStream, recordLocalAudioPlay } from './local-audio';
 import { consumeExpiredSleepTimer, useSleepTimerPlayback } from './sleep-timer';
 import { usePageVisible } from './view-activity';
-import { noteBackgroundMediaCallback, usePlaybackDiagnostics } from './playback-diagnostics';
 
 // One <audio> element for the whole app life: iOS keeps playing in the
 // background and on the lock screen only if the same element is reused.
@@ -266,7 +265,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const onPlay = () => setState((s) => ({ ...s, playing: true }));
     const onPause = () => { settleListening(); setState((s) => ({ ...s, playing: false })); };
     const onTime = () => {
-      noteBackgroundMediaCallback();
       settleListening();
       const now = audio.currentTime;
       const session = blind.current;
@@ -502,7 +500,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     : state.current, [concealed, state.current]);
   useMediaSession({ ...state, current: presentation }, audio, { toggle, pause, resume, next, previous, seek });
   useDesktopLyrics(state.current, audio, concealed);
-  usePlaybackDiagnostics(audio, state.stream);
   const playbackOrder = useMemo(() => state.shuffle && order.current.length === state.queue.length
     ? [...order.current] : state.queue.map((_, index) => index), [state.queue, state.index, state.shuffle]);
 

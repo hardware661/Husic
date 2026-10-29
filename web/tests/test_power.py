@@ -92,21 +92,6 @@ class Power(unittest.TestCase):
         self.hidden(False)
         self.assertAlmostEqual(self.page.locator('.content').evaluate('e=>e.scrollTop'),180,delta=2)
 
-    def test_local_playback_diagnostics_are_bounded_and_exclude_personal_content(self):
-        self.play();self.hidden(True)
-        self.page.evaluate('for(let i=0;i<80;i++)window.__testAudios.find(a=>a.src).dispatchEvent(new Event("stalled"))')
-        self.hidden(False)
-        self.page.locator('a[href="/settings"]:visible').first.click()
-        self.page.evaluate('Object.defineProperty(navigator,"clipboard",{configurable:true,value:{writeText:async text=>{window.__diagnostics=text}}})')
-        self.page.get_by_role('button',name='复制播放诊断',exact=True).click()
-        report=self.page.evaluate('window.__diagnostics');data=json.loads(report)
-        self.assertLessEqual(len(data['recent']),32)
-        self.assertGreaterEqual(data['counts']['stalled'],80)
-        self.assertGreaterEqual(data['counts']['suspend'],1)
-        self.assertEqual(data['current']['format'],'wav')
-        for value in ['fixture.wav','晚风','演示歌手','userAgent','device','http']:
-            self.assertNotIn(value,report)
-
     def test_visible_blur_preserves_player_until_page_is_actually_hidden(self):
         self.play();self.page.locator('.mini-song').click();self.page.wait_for_timeout(700)
         self.page.evaluate('window.dispatchEvent(new Event("blur"))')

@@ -14,7 +14,6 @@ import { Settings } from './settings';
 import { AccountCollections, AccountPlaylist, BilibiliVideo, accountKind } from './account-pages';
 import { DownloadManager, LocalImport } from './offline-music';
 import { usePageVisible } from './view-activity';
-import { notePresentation } from './playback-diagnostics';
 
 export function App() {
   return (
@@ -40,7 +39,6 @@ function Presentation() {
     return () => window.removeEventListener('music-before-presentation-suspend', capture);
   }, []);
   useLayoutEffect(() => {
-    notePresentation(visible);
     if (!visible || !scroll.current) return;
     const saved = scroll.current; scroll.current = null;
     if (saved.node.isConnected) { saved.node.scrollTop = saved.top; saved.node.scrollLeft = saved.left; }

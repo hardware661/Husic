@@ -1,6 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { usePageVisible } from './view-activity';
-import { noteBackgroundMediaCallback, noteSleepTimerActive } from './playback-diagnostics';
 
 const key = 'husic-sleep-timer-v1';
 const listeners = new Set<() => void>();
@@ -59,11 +58,9 @@ export function useSleepTimerPlayback(audio: HTMLAudioElement, stopIfExpired: ()
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let watchingTime = false;
-    const check = (event?: Event) => {
-      if (event?.type === 'timeupdate') noteBackgroundMediaCallback();
+    const check = () => {
       clearTimeout(timer);
       const expired = stopIfExpired(), active = deadline !== null;
-      noteSleepTimerActive(active);
       if (watchingTime !== active) {
         watchingTime = active;
         if (active) audio.addEventListener('timeupdate', check);
