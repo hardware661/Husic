@@ -22,6 +22,6 @@ npm --prefix web run check && npm --prefix web test && npm --prefix web run buil
 
 ## 禁止
 
-- 公开仓：不提交账号、Cookie、数据库地址、私人部署信息或交接记录（私人部署与交接另放私人仓）。
+- 公开仓：不提交账号、Cookie、数据库地址、私人部署信息或交接记录（线上部署与交接放在作者自己的运维仓）。
 - 修 bug 先写能复现的测试。
 - 推送、打标签、发 Release 每一步都要主人当次同意。
