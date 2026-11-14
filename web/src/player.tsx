@@ -8,6 +8,7 @@ import { consumeExpiredSleepTimer, useSleepTimerPlayback } from './sleep-timer';
 import { usePageVisible } from './view-activity';
 import { nextIndex as nextInQueue, orderAfterAppend, orderAfterInsertNext, orderAfterRemove, shuffled } from './queue';
 import { playbackRecorder, scheduleSend, type PlaybackSource } from './playback-events';
+import { listen as listenRemote, markActive, pickPlaylist, playerID, type RemoteCommand } from './remote-control';
 
 // One <audio> element for the whole app life: iOS keeps playing in the
 // background and on the lock screen only if the same element is reused.
@@ -592,6 +593,46 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const cycleRepeat = useCallback(() => setState((s) => ({ ...s, repeat: s.repeat === 'all' ? 'one' : 'all' })), []);
   const setVolume = useCallback((v: number) => setState((s) => ({ ...s, volume: v, muted: false })), []);
   const toggleMute = useCallback(() => setState((s) => ({ ...s, muted: !s.muted })), []);
+
+  // Remote control from the smart-speaker bridge (remote-control.ts): this
+  // player answers when it is the one the owner used last.
+  const remoteID = useMemo(playerID, []);
+  useEffect(() => {
+    markActive(remoteID, true);
+    const used = () => markActive(remoteID);
+    window.addEventListener('pointerdown', used);
+    window.addEventListener('keydown', used);
+    audio.addEventListener('play', used);
+    const stop = listenRemote(remoteID, (c: RemoteCommand) => {
+      notePlayback(c.action === 'pause' || c.action === 'stop' ? 'pause' : 'play', 'remote', audio);
+      if (c.action === 'next') next();
+      else if (c.action === 'pause' || c.action === 'stop') pause();
+      else if (c.action === 'resume') resume();
+      else if (c.action === 'play') {
+        api
+          .library()
+          .then(async (lib) => {
+            let songs = lib.likes;
+            if (c.what.startsWith('playlist:')) {
+              const found = pickPlaylist(lib.playlists, c.what.slice('playlist:'.length));
+              if (!found) throw new Error('没有这个歌单');
+              songs = (await api.playlist(found.id)).songs;
+            }
+            if (!songs.length) throw new Error('歌单是空的');
+            const start = Math.floor(Math.random() * songs.length);
+            play(songs, start);
+            setState((st) => ({ ...st, shuffle: true }));
+          })
+          .catch((e: Error) => toast(e.message || '放不了'));
+      }
+    });
+    return () => {
+      stop();
+      window.removeEventListener('pointerdown', used);
+      window.removeEventListener('keydown', used);
+      audio.removeEventListener('play', used);
+    };
+  }, [audio, remoteID, play, next, pause, resume]);
 
   const concealed = Boolean(blindSession && !blindSession.revealed && state.current && keyOf(blindSession.item) === keyOf(state.current));
   const presentation = useMemo(

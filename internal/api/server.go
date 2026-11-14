@@ -50,6 +50,8 @@ type Server struct {
 	}
 	Log *slog.Logger
 
+	remote remoteHub
+
 	cacheMu sync.Mutex
 	cache   map[string]cacheEntry
 	radio   fmBuffer
@@ -73,6 +75,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/likes", s.like)
 	mux.HandleFunc("POST /api/plays", s.play)
 	mux.HandleFunc("POST /api/playback-events", s.playbackEvents)
+	mux.HandleFunc("GET /api/remote/listen", s.remoteListen)
+	mux.HandleFunc("POST /api/remote/active", s.remoteActive)
+	mux.HandleFunc("POST /api/remote/command", s.remoteCommand)
 	mux.HandleFunc("GET /api/library", s.library)
 	mux.HandleFunc("POST /api/songs/{id}/pin", s.pin)
 	mux.HandleFunc("POST /api/playlists", s.createPlaylist)
@@ -108,6 +113,7 @@ func (s *Server) Handler() http.Handler {
 // serviceRoutes is all a service key may reach.
 var serviceRoutes = map[string]bool{
 	"GET /api/library": true, "GET /api/search": true, "POST /api/stream": true,
+	"POST /api/remote/command": true,
 }
 
 func serviceAllowed(r *http.Request) bool {

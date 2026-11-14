@@ -60,7 +60,9 @@ openssl rand -hex 32 > service.key && chmod 600 service.key
 HUSIC_SERVICE_KEY_FILE=/path/to/service.key
 ```
 
-那个程序请求时带 `Authorization: Bearer <service.key 的内容>`，不用经过反向代理的登录。这把钥匙只能用 `GET /api/library`、`GET /api/playlists/{id}`、`GET /api/search`、`POST /api/stream`，其它接口一律 403。`/api/stream` 可以带 `"sources": ["netease"]` 只在指定平台找、`"noLink": true` 不把找到的副本记进曲库。
+那个程序请求时带 `Authorization: Bearer <service.key 的内容>`，不用经过反向代理的登录。这把钥匙只能用 `GET /api/library`、`GET /api/playlists/{id}`、`GET /api/search`、`POST /api/stream`、`POST /api/remote/command`，其它接口一律 403。
+
+`POST /api/remote/command`（`{"action":"play","what":"liked"}`，action 还有 `next`、`pause`、`resume`、`stop`；`what` 也可以是 `playlist:歌单名`）让主人正开着的 Husic 去执行：每个打开的播放器（桌面客户端或网页）都挂着 `GET /api/remote/listen`，并在被使用时报一下 `POST /api/remote/active`，命令只发给最近用过的那一个。没有播放器开着时返回 409。`/api/stream` 可以带 `"sources": ["netease"]` 只在指定平台找、`"noLink": true` 不把找到的副本记进曲库。
 
 ## 国内平台与代理
 
