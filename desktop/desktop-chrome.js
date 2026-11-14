@@ -40,6 +40,7 @@
       input.closest('label').classList.toggle('is-selected', input.checked);
     }
     section.querySelector('[data-setting="topmost"]').setAttribute('aria-checked', String(state.topmost));
+    section.querySelector('[data-setting="autoStart"]').setAttribute('aria-checked', String(state.autoStart === true));
     section.querySelector('[data-setting="lyricsEnabled"]').setAttribute('aria-checked', String(state.lyricsEnabled === true));
     const lyricOptions=section.querySelector('.desktop-lyrics-disclosure');
     lyricOptions.classList.toggle('is-open',state.lyricsEnabled===true);
@@ -135,6 +136,11 @@
           </fieldset></div>
         </div>
         <div class="setting-row">
+          <span class="setting-symbol">${svg('window', 20)}</span>
+          <div class="setting-copy"><strong>开机自动启动</strong></div>
+          <div class="setting-control"><button class="desktop-switch" type="button" role="switch" aria-label="开机自动启动（收在托盘）" aria-checked="false" data-setting="autoStart"><span></span></button></div>
+        </div>
+        <div class="setting-row">
           <span class="setting-symbol">${svg('pin', 20)}</span>
           <div class="setting-copy"><strong>窗口置顶</strong></div>
           <div class="setting-control"><button class="desktop-switch" type="button" role="switch" aria-label="窗口置顶" aria-checked="false" data-setting="topmost"><span></span></button></div>
@@ -177,6 +183,7 @@
       const button = event.target instanceof Element ? event.target.closest('button') : null;
       if (!button || button.disabled) return;
       if (button.dataset.setting === 'topmost') send('desktop-settings-change', { name: 'topmost', value: !state.topmost });
+      if (button.dataset.setting === 'autoStart') send('desktop-settings-change', { name: 'autoStart', value: !state.autoStart });
       if (button.dataset.setting === 'lyricsEnabled') send('desktop-settings-change', { name: 'lyricsEnabled', value: !state.lyricsEnabled });
       if (button.dataset.setting === 'lyricsSecondaryEnabled') send('desktop-settings-change', { name: 'lyricsSecondaryEnabled', value: state.lyricsSecondaryEnabled===false });
       if (button.dataset.lyricColor) send('desktop-settings-change', { name: 'lyricsColor', value: button.dataset.lyricColor });

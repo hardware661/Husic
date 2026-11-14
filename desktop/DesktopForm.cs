@@ -21,6 +21,7 @@ namespace Husic.Desktop
         {
             DesktopOptions options = new DesktopOptions();
             options.ResetUi = Array.IndexOf(args, "--reset-ui") >= 0;
+            options.StartInTray = Array.IndexOf(args, "--tray") >= 0;
             SetCurrentProcessExplicitAppUserModelID(options.AppId);
             using (SingleInstance instance = new SingleInstance(options.AppId))
             {
@@ -149,6 +150,21 @@ namespace Husic.Desktop
             // ordinary dragging never silently overwrites that preference.
             WindowState = FormWindowState.Normal;
             Bounds = WindowLayout.LaunchBounds(Preferences);
+        }
+
+        // Started with Windows (--tray): load the page but keep the window in
+        // the tray until the owner opens it, so remote play works at once.
+        protected override void SetVisibleCore(bool value)
+        {
+            if (Options.StartInTray && value && !IsHandleCreated)
+            {
+                CreateHandle();
+                value = false;
+                Options.StartInTray = false;
+                // Shown never fires while hidden: start the page here.
+                BeginInvoke((Action)async delegate { if (!initialized) { initialized = true; await InitializeBrowser(); } });
+            }
+            base.SetVisibleCore(value);
         }
 
         private async Task InitializeBrowser()

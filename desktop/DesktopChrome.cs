@@ -225,6 +225,12 @@ namespace Husic.Desktop
             LastPreferenceChange = name + ":" + (value == null ? "null" : value.GetType().Name + ":" + Convert.ToString(value));
 #endif
             DesktopPreferences next = Preferences.Copy();
+            if (name == "autoStart" && value is bool)
+            {
+                bool done = AutoStart.Set((bool)value);
+                PublishDesktopState(done ? null : "开机自启没设好，请稍后重试。");
+                return done;
+            }
             if (name == "closeToTray" && value is bool) next.CloseToTray = (bool)value;
             else if (name == "topmost" && value is bool) next.Topmost = (bool)value;
             else if (name == "lyricsEnabled" && value is bool) next.LyricsEnabled = (bool)value;
@@ -270,7 +276,8 @@ namespace Husic.Desktop
             {
                 Browser.CoreWebView2.PostWebMessageAsJson(new JavaScriptSerializer().Serialize(new {
                     type = "husic-desktop-state", version = "0.2.0", maximized = WindowState == FormWindowState.Maximized,
-                    closeToTray = Preferences.CloseToTray, topmost = Preferences.Topmost, zoom = Preferences.Zoom, error = error
+                    closeToTray = Preferences.CloseToTray, topmost = Preferences.Topmost, zoom = Preferences.Zoom, error = error,
+                    autoStart = AutoStart.Enabled
                     , lyricsEnabled = Preferences.LyricsEnabled, lyricsSecondaryEnabled = Preferences.LyricsSecondaryEnabled, lyricsLocked = Preferences.LyricsLocked, lyricsSize = Preferences.LyricsSize,
                     lyricsMinFont = Preferences.LyricsMinFont, lyricsMaxFont = Preferences.LyricsMaxFont, lyricsBackdrop = Preferences.LyricsBackdrop,
                     lyricsColor = Preferences.LyricsColor, lyricsSecondaryColor = Preferences.LyricsSecondaryColor, lyricsOrientation = Preferences.LyricsOrientation, lyricsAutoDock = Preferences.LyricsAutoDock,

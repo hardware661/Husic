@@ -17,6 +17,42 @@ namespace Husic.Desktop
         internal string FixtureDirectory = null;
         internal bool Test = false;
         internal bool ResetUi = false;
+        internal bool StartInTray = false; // --tray: started with Windows, stay in the tray
+    }
+
+    // Start with Windows: one value under HKCU\Software\Microsoft\Windows\
+    // CurrentVersion\Run that starts this exe with --tray. Off by default;
+    // the registry, not desktop.json, is the truth, so a value removed by
+    // Windows' own Startup settings shows as off.
+    internal static class AutoStart
+    {
+        private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+        private const string Name = "Husic";
+
+        private static string Command { get { return "\"" + System.Windows.Forms.Application.ExecutablePath + "\" --tray"; } }
+
+        internal static bool Enabled
+        {
+            get
+            {
+                using (Microsoft.Win32.RegistryKey key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(RunKey))
+                    return key != null && key.GetValue(Name) as string == Command;
+            }
+        }
+
+        internal static bool Set(bool on)
+        {
+            try
+            {
+                using (Microsoft.Win32.RegistryKey key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(RunKey))
+                {
+                    if (on) key.SetValue(Name, Command);
+                    else if (key.GetValue(Name) != null) key.DeleteValue(Name);
+                }
+                return Enabled == on;
+            }
+            catch (Exception) { return false; }
+        }
     }
 
     internal static class DataDirectory
