@@ -67,6 +67,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/lyrics", s.lyrics)
 	mux.HandleFunc("POST /api/likes", s.like)
 	mux.HandleFunc("POST /api/plays", s.play)
+	mux.HandleFunc("POST /api/playback-events", s.playbackEvents)
 	mux.HandleFunc("GET /api/library", s.library)
 	mux.HandleFunc("POST /api/songs/{id}/pin", s.pin)
 	mux.HandleFunc("POST /api/playlists", s.createPlaylist)

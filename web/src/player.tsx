@@ -7,6 +7,7 @@ import { localAudioID, localAudioStream, recordLocalAudioPlay } from './local-au
 import { consumeExpiredSleepTimer, useSleepTimerPlayback } from './sleep-timer';
 import { usePageVisible } from './view-activity';
 import { nextIndex as nextInQueue, orderAfterAppend, orderAfterInsertNext, orderAfterRemove, shuffled } from './queue';
+import { playbackRecorder, scheduleSend, type PlaybackSource } from './playback-events';
 
 // One <audio> element for the whole app life: iOS keeps playing in the
 // background and on the lock screen only if the same element is reused.
@@ -350,8 +351,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const rejected = [...new Set([...rejectedCopies.current, `${s.stream.source}:${s.stream.id}`])];
       load(s.queue, s.index, true, rejected, audio.currentTime, true);
     };
+    const observePlay = () => observePlayback('play');
+    const observePause = () => observePlayback('pause');
     audio.addEventListener('play', onPlay);
     audio.addEventListener('pause', onPause);
+    audio.addEventListener('play', observePlay);
+    audio.addEventListener('pause', observePause);
     if (!trackingSuspended.current) audio.addEventListener('timeupdate', onTime);
     audio.addEventListener('ended', onEnded);
     audio.addEventListener('error', onError);
@@ -359,6 +364,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return () => {
       audio.removeEventListener('play', onPlay);
       audio.removeEventListener('pause', onPause);
+      audio.removeEventListener('play', observePlay);
+      audio.removeEventListener('pause', observePause);
       audio.removeEventListener('timeupdate', onTime);
       audio.removeEventListener('ended', onEnded);
       audio.removeEventListener('error', onError);
@@ -459,7 +466,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [audio, load]);
   const toggle = useCallback(() => {
     const s = stateRef.current;
-    if ((s.loading && wanted.current) || !audio.paused) pause();
+    const stop = (s.loading && wanted.current) || !audio.paused;
+    notePlayback(stop ? 'pause' : 'play', 'button', audio);
+    if (stop) pause();
     else resume();
   }, [audio, pause, resume]);
 
@@ -661,6 +670,28 @@ function nextIndex(length: number, index: number, s: Pick<PlayerState, 'shuffle'
   return nextInQueue(length, index, s.shuffle, order, wrap);
 }
 
+function notePlayback(action: 'play' | 'pause', from: PlaybackSource, audio: HTMLAudioElement) {
+  playbackRecorder.intent(action, from, audio.paused ? 'paused' : 'playing');
+  scheduleSend();
+}
+
+function observePlayback(action: 'play' | 'pause') {
+  playbackRecorder.observed(action, action === 'play' ? 'paused' : 'playing');
+  scheduleSend();
+}
+
+// The desktop shell forwards media keys as messages; log them so a key the
+// shell turned into play/pause can be told from one the OS sent directly.
+const webview = (
+  window as unknown as { chrome?: { webview?: { addEventListener: (t: string, f: (e: { data: unknown }) => void) => void } } }
+).chrome?.webview;
+webview?.addEventListener('message', (event) => {
+  const value = event.data as { type?: string; action?: string } | null;
+  if (value?.type !== 'husic-desktop-control' || typeof value.action !== 'string') return;
+  playbackRecorder.intent(value.action === 'pause' ? 'pause' : 'play', 'desktop', `key:${value.action}`.slice(0, 32));
+  scheduleSend();
+});
+
 /** Lock screen, Control Center and headphone buttons. */
 function useMediaSession(
   state: PlayerState,
@@ -686,8 +717,22 @@ function useMediaSession(
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
     const handlers: [MediaSessionAction, MediaSessionActionHandler][] = [
-      ['play', () => actions.resume()],
-      ['pause', () => actions.pause()],
+      // The OS media session: hardware keys, Bluetooth (AVRCP) play/pause, the
+      // Windows media flyout — and the desktop shell, which forwards its keys here.
+      [
+        'play',
+        () => {
+          notePlayback('play', 'mediasession', audio);
+          actions.resume();
+        },
+      ],
+      [
+        'pause',
+        () => {
+          notePlayback('pause', 'mediasession', audio);
+          actions.pause();
+        },
+      ],
       ['nexttrack', () => actions.next()],
       ['previoustrack', () => actions.previous()],
       ['seekto', (d) => d.seekTime !== undefined && actions.seek(d.seekTime)],
