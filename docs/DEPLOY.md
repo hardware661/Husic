@@ -51,6 +51,17 @@ Docker 的 `compose.yaml` 已经设了这个值，因为请求是从 Docker 自�
 
 请求头的名字可以用 `HUSIC_GATEWAY_HEADER` 改。
 
+### 给同一台机器上的其它程序只读访问
+
+比如让智能音箱桥接程序读你的「我喜欢」和歌单、取播放地址：
+
+```bash
+openssl rand -hex 32 > service.key && chmod 600 service.key
+HUSIC_SERVICE_KEY_FILE=/path/to/service.key
+```
+
+那个程序请求时带 `Authorization: Bearer <service.key 的内容>`，不用经过反向代理的登录。这把钥匙只能用 `GET /api/library`、`GET /api/playlists/{id}`、`GET /api/search`、`POST /api/stream`，其它接口一律 403。`/api/stream` 可以带 `"sources": ["netease"]` 只在指定平台找、`"noLink": true` 不把找到的副本记进曲库。
+
 ## 国内平台与代理
 
 QQ 音乐、酷我、酷狗、咪咕、网易云大多只对国内网络提供完整播放。服务器在海外时，给 Husic 一个国内出口：

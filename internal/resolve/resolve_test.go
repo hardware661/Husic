@@ -94,3 +94,25 @@ func TestUnreachablePlatformsAreBoundedAndNotBlamed(t *testing.T) {
 		}
 	}
 }
+
+func TestOnlyRestrictsToListedPlatforms(t *testing.T) {
+	a := source.Track{Source: "kuwo", ID: "k1", Title: "Song", Artists: []string{"Artist"}, Duration: 180, Pinned: true}
+	n := a
+	n.Source, n.ID, n.Pinned = "netease", "n1", false
+	kuwo := &testProvider{name: "kuwo", tracks: []source.Track{a}}
+	netease := &testProvider{name: "netease", tracks: []source.Track{n}}
+	r := New([]source.Provider{kuwo, netease}, nil)
+	got, _, err := r.Only("netease").Resolve(context.Background(), 0, a, []source.Track{a, n})
+	if err != nil || got.Source != "netease" || kuwo.calls != 0 {
+		t.Fatalf("got %s err=%v kuwo calls=%d", got.Ref(), err, kuwo.calls)
+	}
+	// Discovery is restricted too: with only a kuwo copy known, netease is searched.
+	got, _, err = r.Only("netease").Resolve(context.Background(), 0, a, []source.Track{a})
+	if err != nil || got.Source != "netease" || kuwo.calls != 0 {
+		t.Fatalf("discovery got %s err=%v kuwo calls=%d", got.Ref(), err, kuwo.calls)
+	}
+	// The original resolver is unchanged.
+	if got, _, _ := r.Resolve(context.Background(), 0, a, []source.Track{a}); got.Source != "kuwo" {
+		t.Fatalf("unrestricted resolver changed: %s", got.Ref())
+	}
+}

@@ -36,6 +36,11 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 		Item     Item     `json:"item"`
 		Retry    string   `json:"retry"`    // "source:id" that just failed in the player
 		Rejected []string `json:"rejected"` // all copies rejected during this listen
+		// Sources limits the platforms tried and searched (e.g. a device
+		// that can only play one platform's links). NoLink: do not record
+		// copies found on the way.
+		Sources []string `json:"sources"`
+		NoLink  bool     `json:"noLink"`
 	}
 	if err := readBody(r, &req); err != nil {
 		fail(w, http.StatusBadRequest, "bad request")
@@ -59,7 +64,18 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 			item.Copies = append(song.Sources, item.Copies...)
 		}
 	}
-	t, stream, err := s.Resolver.Resolve(r.Context(), item.SongID, item.want(), item.Copies, req.Rejected...)
+	resolver, songID := s.Resolver, item.SongID
+	if len(req.Sources) > 0 {
+		if len(req.Sources) > 8 {
+			fail(w, http.StatusBadRequest, "too many sources")
+			return
+		}
+		resolver = resolver.Only(req.Sources...)
+	}
+	if req.NoLink {
+		songID = 0
+	}
+	t, stream, err := resolver.Resolve(r.Context(), songID, item.want(), item.Copies, req.Rejected...)
 	if err != nil {
 		if resolve.IsUnavailable(err) {
 			fail(w, http.StatusNotFound, "unavailable")

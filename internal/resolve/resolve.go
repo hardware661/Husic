@@ -56,6 +56,21 @@ func New(providers []source.Provider, links Linker) *Resolver {
 	return r
 }
 
+// Only returns a resolver that uses just the named platforms: copies on
+// other platforms are skipped and only these are searched. It keeps its own
+// stream cache and records nothing (links are nil). Unknown names are ignored.
+func (r *Resolver) Only(names ...string) *Resolver {
+	o := &Resolver{providers: map[string]source.Provider{}, rank: map[string]int{}, cache: map[string]cached{}, total: r.total}
+	for _, n := range r.order {
+		if slices.Contains(names, n) {
+			o.providers[n] = r.providers[n]
+			o.rank[n] = len(o.order)
+			o.order = append(o.order, n)
+		}
+	}
+	return o
+}
+
 // Order is the provider priority, best first.
 func (r *Resolver) Order() []string { return slices.Clone(r.order) }
 

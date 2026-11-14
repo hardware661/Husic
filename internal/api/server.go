@@ -38,8 +38,13 @@ type Server struct {
 	GatewayHeader string
 	GatewayKey    string
 	AllowRemote   bool
-	WebDir        string
-	YouTube       interface {
+	// ServiceKey lets another program on the same host (a smart-speaker
+	// bridge) read the library and resolve streams with
+	// "Authorization: Bearer <key>", without the edge's gateway proof.
+	// It opens nothing else. Empty: no service access.
+	ServiceKey string
+	WebDir     string
+	YouTube    interface {
 		http.Handler
 		Status() (bool, bool)
 	}
@@ -100,8 +105,29 @@ func (s *Server) Handler() http.Handler {
 	return s.gate(mux)
 }
 
+// serviceRoutes is all a service key may reach.
+var serviceRoutes = map[string]bool{
+	"GET /api/library": true, "GET /api/search": true, "POST /api/stream": true,
+}
+
+func serviceAllowed(r *http.Request) bool {
+	if serviceRoutes[r.Method+" "+r.URL.Path] {
+		return true
+	}
+	rest, ok := strings.CutPrefix(r.URL.Path, "/api/playlists/")
+	return ok && r.Method == http.MethodGet && rest != "" && !strings.Contains(rest, "/")
+}
+
 func (s *Server) gate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if key, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer "); ok && s.ServiceKey != "" && key != "" {
+			if subtle.ConstantTimeCompare([]byte(key), []byte(s.ServiceKey)) != 1 || !serviceAllowed(r) {
+				http.Error(w, "forbidden", http.StatusForbidden)
+				return
+			}
+			next.ServeHTTP(w, r)
+			return
+		}
 		if s.GatewayKey != "" {
 			if subtle.ConstantTimeCompare([]byte(r.Header.Get(s.GatewayHeader)), []byte(s.GatewayKey)) != 1 {
 				http.Error(w, "forbidden", http.StatusForbidden)

@@ -11,12 +11,14 @@ import (
 	"net/http/httptest"
 	"net/netip"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/hardware661/husic/internal/resolve"
 	"github.com/hardware661/husic/internal/source"
+	"github.com/hardware661/husic/internal/store"
 )
 
 type downloadProvider struct{ kind, address string }
@@ -355,5 +357,29 @@ func TestDownloadRejectsInvalidInternalTokens(t *testing.T) {
 		if media.called || w.Code != 502 {
 			t.Fatalf("invalid token reached media: %s status %d", address, w.Code)
 		}
+	}
+}
+
+func TestStreamSourcesAndNoLink(t *testing.T) {
+	db, err := store.Open(context.Background(), "sqlite:"+filepath.Join(t.TempDir(), "husic.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(db.Close)
+	if err := db.Migrate(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	s := &Server{Store: db, Resolver: resolve.New([]source.Provider{downloadProvider{"kuwo", "https://kuwo.invalid/a.mp3"}, downloadProvider{"netease", "https://netease.invalid/a.mp3"}}, nil), AllowRemote: true}
+	h := s.Handler()
+	body := `{"item":{"title":"Song","artists":["A"],"duration":180,"copies":[{"source":"kuwo","id":"k","title":"Song","artists":["A"],"duration":180},{"source":"netease","id":"n","title":"Song","artists":["A"],"duration":180}]},"sources":["netease"],"noLink":true}`
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("POST", "/api/stream", strings.NewReader(body)))
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"source":"netease"`) {
+		t.Fatalf("restricted stream = %d %s", w.Code, w.Body)
+	}
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("POST", "/api/stream", strings.NewReader(strings.Replace(body, `"sources":["netease"],`, "", 1))))
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"source":"kuwo"`) {
+		t.Fatalf("unrestricted stream = %d %s", w.Code, w.Body)
 	}
 }
