@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -87,17 +88,22 @@ func (h *remoteHub) report(id string, st remoteState) {
 	}
 }
 
-// current is the most recently used player (the one commands go to); call
-// with h.mu held.
+// current is the player commands go to: the desktop app on the owner's PC
+// when one is open (the speaker's commands are for the PC; speaker v6 §2.6:
+// a phone tab used later took them), else the most recently used player.
+// Call with h.mu held.
 func (h *remoteHub) current() *remotePlayer {
 	var best *remotePlayer
 	for _, p := range h.players {
-		if best == nil || p.active.After(best.active) {
+		if best == nil || isDesktop(p) && !isDesktop(best) || isDesktop(p) == isDesktop(best) && p.active.After(best.active) {
 			best = p
 		}
 	}
 	return best
 }
+
+// isDesktop: the Husic desktop app (its player id starts with "exe-").
+func isDesktop(p *remotePlayer) bool { return strings.HasPrefix(p.id, "exe-") }
 
 // stateNow is what the player commands go to is doing.
 func (h *remoteHub) stateNow() remoteState {

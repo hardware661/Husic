@@ -98,6 +98,48 @@ func TestRemoteCommandGoesToTheLastActivePlayer(t *testing.T) {
 	}
 }
 
+// The speaker's commands are for the owner's PC (speaker v6 §2.6): the
+// desktop app gets them even when a browser tab was used more recently;
+// without an open desktop app the last used player still answers.
+func TestRemoteCommandPrefersTheDesktopApp(t *testing.T) {
+	s := &Server{GatewayHeader: "X-Proof", GatewayKey: "edge-proof", ServiceKey: "svc-key"}
+	srv := httptest.NewServer(s.Handler())
+	defer srv.Close()
+	exe, stopExe := listen(t, srv.URL, "exe-1")
+	defer stopExe() // also on a failure: an open stream keeps srv.Close waiting
+	web, stopWeb := listen(t, srv.URL, "web-1")
+	defer stopWeb()
+	waitConnected(t, s, 2)
+	post(t, srv.URL, "/api/remote/active", "proof", `{"player":"exe-1"}`)
+	time.Sleep(5 * time.Millisecond)
+	post(t, srv.URL, "/api/remote/active", "proof", `{"player":"web-1"}`) // the phone tab, used later
+	post(t, srv.URL, "/api/remote/command", "svc-key", `{"action":"pause"}`)
+	select {
+	case got := <-exe:
+		if !strings.Contains(got, `"action":"pause"`) {
+			t.Fatalf("exe got %s", got)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("the desktop app got nothing")
+	}
+	select {
+	case got := <-web:
+		t.Fatalf("web must not get it while the exe is open: %s", got)
+	case <-time.After(50 * time.Millisecond):
+	}
+	stopExe()
+	waitConnected(t, s, 1)
+	post(t, srv.URL, "/api/remote/command", "svc-key", `{"action":"resume"}`)
+	select {
+	case got := <-web:
+		if !strings.Contains(got, `"action":"resume"`) {
+			t.Fatalf("web got %s", got)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("with no exe, the last used player answers")
+	}
+}
+
 func TestRemoteCommandWithNoPlayerIsAConflict(t *testing.T) {
 	s := &Server{GatewayHeader: "X-Proof", GatewayKey: "edge-proof", ServiceKey: "svc-key"}
 	srv := httptest.NewServer(s.Handler())
