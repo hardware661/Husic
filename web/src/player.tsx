@@ -9,6 +9,7 @@ import { usePageVisible } from './view-activity';
 import { nextIndex as nextInQueue, orderAfterAppend, orderAfterInsertNext, orderAfterRemove, shuffled } from './queue';
 import { playbackRecorder, scheduleSend, type PlaybackSource } from './playback-events';
 import {
+  createSessionGate,
   listen as listenRemote,
   markActive,
   pickPlaylist,
@@ -478,6 +479,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const s = stateRef.current;
     const stop = (s.loading && wanted.current) || !audio.paused;
     notePlayback(stop ? 'pause' : 'play', 'button', audio);
+    if (stop) sessionGate.ownerPaused();
     if (stop) pause();
     else resume();
   }, [audio, pause, resume]);
@@ -649,6 +651,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       // pause reaches this player over Bluetooth (AVRCP) a moment later; a
       // play the speaker just asked for must not be undone by it (11-15).
       remoteHold.current = c.action === 'pause' || c.action === 'stop' ? 0 : Date.now() + REMOTE_HOLD_MS;
+      if (c.action === 'pause' || c.action === 'stop') sessionGate.ownerPaused();
       if (c.action === 'next') next();
       else if (c.action === 'pause' || c.action === 'stop') pause();
       else if (c.action === 'resume') resume();
@@ -702,7 +705,20 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
     pause();
   }, [audio, pause]);
-  useMediaSession({ ...state, current: presentation }, audio, { toggle, pause: sessionPause, resume, next, previous, seek });
+  const sessionResume = useCallback(() => {
+    // One tick later, after a desktop key's message has marked the play
+    // as the owner's (see the webview listener below).
+    setTimeout(() => {
+      if (sessionGate.allowPlay()) resume();
+      else notePlayback('play', 'held', audio);
+    }, 0);
+  }, [audio, resume]);
+  useEffect(() => {
+    const played = () => sessionGate.ownerPlayed();
+    audio.addEventListener('play', played);
+    return () => audio.removeEventListener('play', played);
+  }, [audio]);
+  useMediaSession({ ...state, current: presentation }, audio, { toggle, pause: sessionPause, resume: sessionResume, next, previous, seek });
   useDesktopLyrics(state.current, audio, concealed);
   const playbackOrder = useMemo(
     () => (state.shuffle && order.current.length === state.queue.length ? [...order.current] : state.queue.map((_, index) => index)),
@@ -774,6 +790,14 @@ function nextIndex(length: number, index: number, s: Pick<PlayerState, 'shuffle'
 /** How long after a remote play a Bluetooth pause is ignored. */
 const REMOTE_HOLD_MS = 6000;
 
+// A Bluetooth (media session) play resumes only music Xiao Ai interrupted,
+// never music the owner paused: her answer to "没事了" started it again
+// (11-15). Any real play (a song picked, the button, the speaker panel)
+// lifts the hold; a pause from the button, a key or the speaker sets it.
+// Only in the desktop app, the player the speaker is paired with: on a
+// phone the lock screen's play after an in-app pause is the owner's own.
+const sessionGate = createSessionGate(Boolean((window as unknown as { chrome?: { webview?: unknown } }).chrome?.webview));
+
 function notePlayback(action: 'play' | 'pause', from: PlaybackSource, audio: HTMLAudioElement) {
   playbackRecorder.intent(action, from, audio.paused ? 'paused' : 'playing');
   scheduleSend();
@@ -793,6 +817,13 @@ webview?.addEventListener('message', (event) => {
   const value = event.data as { type?: string; action?: string } | null;
   if (value?.type !== 'husic-desktop-control' || typeof value.action !== 'string') return;
   playbackRecorder.intent(value.action === 'pause' ? 'pause' : 'play', 'desktop', `key:${value.action}`.slice(0, 32));
+  // A key or tray click from the owner. The shell's bridge has already
+  // called the session handler; a play there waits a tick (sessionResume),
+  // so marking it the owner's here lets it through. The session's state is
+  // still the one from before the key.
+  const wasPlaying = navigator.mediaSession?.playbackState === 'playing';
+  if (value.action === 'pause' || (value.action === 'toggle' && wasPlaying)) sessionGate.ownerPaused();
+  else if (value.action === 'play' || value.action === 'toggle') sessionGate.ownerPlayed();
   scheduleSend();
 });
 

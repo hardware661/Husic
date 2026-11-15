@@ -86,3 +86,18 @@ export function reportState(id: string, st: RemoteState) {
     keepalive: true,
   }).catch(() => {});
 }
+
+/**
+ * When the speaker is paired over Bluetooth, Xiao Ai pauses the PC's music
+ * (AVRCP) to answer and sends "play" when she is done. That play must
+ * resume only music she interrupted: after the owner paused it, her
+ * answer to "没事了" or a finished alarm started it again (11-15).
+ */
+export function createSessionGate(enabled = true) {
+  let ownerHeld = false;
+  return {
+    ownerPaused: () => void (ownerHeld = enabled),
+    ownerPlayed: () => void (ownerHeld = false),
+    allowPlay: () => !ownerHeld,
+  };
+}
