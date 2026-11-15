@@ -607,6 +607,36 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   // player answers when it is the one the owner used last.
   const remoteID = useMemo(playerID, []);
   const remoteHold = useRef(0);
+  // The remote "play my liked songs" kept warm: library fetched, a random
+  // first song picked and its stream resolved (11-15: three seconds of
+  // lookups between the speaker's command and sound).
+  const warm = useRef<Promise<{ songs: Item[]; start: number }> | null>(null);
+  const remoteSongs = useCallback(async (what: string) => {
+    const lib = await api.library();
+    let songs = lib.likes;
+    if (what.startsWith('playlist:')) {
+      const found = pickPlaylist(lib.playlists, what.slice('playlist:'.length));
+      if (!found) throw new Error('没有这个歌单');
+      songs = (await api.playlist(found.id)).songs;
+    }
+    if (!songs.length) throw new Error('歌单是空的');
+    return { songs, start: Math.floor(Math.random() * songs.length) };
+  }, []);
+  const prepare = useCallback(() => {
+    const next = remoteSongs('liked').then((w) => {
+      void resolve(w.songs[w.start]).catch(() => {});
+      return w;
+    });
+    next.catch(() => {
+      if (warm.current === next) warm.current = null;
+    });
+    warm.current = next;
+  }, [remoteSongs, resolve]);
+  useEffect(() => {
+    prepare();
+    const t = setInterval(prepare, 6 * 60 * 1000); // stream addresses are kept 8 min at most
+    return () => clearInterval(t);
+  }, [prepare]);
   useEffect(() => {
     markActive(remoteID, true);
     const used = () => markActive(remoteID);
@@ -623,21 +653,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       else if (c.action === 'pause' || c.action === 'stop') pause();
       else if (c.action === 'resume') resume();
       else if (c.action === 'play') {
-        api
-          .library()
-          .then(async (lib) => {
-            let songs = lib.likes;
-            if (c.what.startsWith('playlist:')) {
-              const found = pickPlaylist(lib.playlists, c.what.slice('playlist:'.length));
-              if (!found) throw new Error('没有这个歌单');
-              songs = (await api.playlist(found.id)).songs;
-            }
-            if (!songs.length) throw new Error('歌单是空的');
-            const start = Math.floor(Math.random() * songs.length);
-            play(songs, start);
+        // "liked" is ready ahead of time (below): the songs and a random
+        // first one already resolved, so sound starts with no lookups.
+        const ready = c.what === 'liked' || !c.what ? warm.current : null;
+        warm.current = null;
+        (ready ? ready.then((w) => (w.songs.length ? w : remoteSongs(c.what))) : remoteSongs(c.what))
+          .then((w) => {
+            play(w.songs, w.start);
             setState((st) => ({ ...st, shuffle: true }));
           })
-          .catch((e: Error) => toast(e.message || '放不了'));
+          .catch((e: Error) => toast(e.message || '放不了'))
+          .finally(() => setTimeout(prepare, 5000));
       }
     });
     return () => {
@@ -646,7 +672,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('keydown', used);
       audio.removeEventListener('play', used);
     };
-  }, [audio, remoteID, play, next, pause, resume]);
+  }, [audio, remoteID, play, next, pause, resume, remoteSongs, prepare]);
 
   // What plays, for the speaker's panel: sent on every song or play change.
   const reported = useRef<RemoteState | null>(null);
