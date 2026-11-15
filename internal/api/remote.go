@@ -27,6 +27,15 @@ type remotePlayer struct {
 	id     string
 	out    chan remoteCommand
 	active time.Time
+	state  remoteState
+}
+
+// remoteState is what a player last said it is doing.
+type remoteState struct {
+	Open    bool   `json:"open"`
+	Title   string `json:"title,omitempty"`
+	Artist  string `json:"artist,omitempty"`
+	Playing bool   `json:"playing,omitempty"`
 }
 
 type remoteHub struct {
@@ -48,7 +57,7 @@ func (h *remoteHub) join(id string) *remotePlayer {
 	}
 	p := &remotePlayer{id: id, out: make(chan remoteCommand, 4)}
 	if old := h.players[id]; old != nil {
-		p.active = old.active // a reconnect keeps its place
+		p.active, p.state = old.active, old.state // a reconnect keeps its place
 	}
 	h.players[id] = p
 	return p
@@ -70,16 +79,44 @@ func (h *remoteHub) touch(id string) {
 	}
 }
 
-// send delivers c to the most recently used player; false if none is open.
-func (h *remoteHub) send(c remoteCommand) (string, bool) {
+func (h *remoteHub) report(id string, st remoteState) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	if p := h.players[id]; p != nil {
+		p.state = st
+	}
+}
+
+// current is the most recently used player (the one commands go to); call
+// with h.mu held.
+func (h *remoteHub) current() *remotePlayer {
 	var best *remotePlayer
 	for _, p := range h.players {
 		if best == nil || p.active.After(best.active) {
 			best = p
 		}
 	}
+	return best
+}
+
+// stateNow is what the player commands go to is doing.
+func (h *remoteHub) stateNow() remoteState {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	p := h.current()
+	if p == nil {
+		return remoteState{}
+	}
+	st := p.state
+	st.Open = true
+	return st
+}
+
+// send delivers c to the most recently used player; false if none is open.
+func (h *remoteHub) send(c remoteCommand) (string, bool) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	best := h.current()
 	if best == nil {
 		return "", false
 	}
@@ -164,4 +201,25 @@ func (s *Server) remoteCommand(w http.ResponseWriter, r *http.Request) {
 		s.Log.Info("remote command", "action", c.Action, "player", id)
 	}
 	writeJSON(w, http.StatusAccepted, map[string]string{"player": id})
+}
+
+// remoteReport: a player says what it plays (on every song change and
+// play/pause), so the speaker's panel can show it.
+func (s *Server) remoteReport(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Player  string `json:"player"`
+		Title   string `json:"title"`
+		Artist  string `json:"artist"`
+		Playing bool   `json:"playing"`
+	}
+	if err := readBody(r, &req); err != nil || !validPlayerID(req.Player) || len(req.Title) > 300 || len(req.Artist) > 300 {
+		fail(w, http.StatusBadRequest, "bad request")
+		return
+	}
+	s.remote.report(req.Player, remoteState{Title: req.Title, Artist: req.Artist, Playing: req.Playing})
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) remoteStateNow(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, s.remote.stateNow())
 }

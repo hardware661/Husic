@@ -3,6 +3,8 @@ package api
 import (
 	"bufio"
 	"context"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -123,5 +125,39 @@ func TestRemoteRoutesAndTheServiceKey(t *testing.T) {
 	resp.Body.Close()
 	if resp.StatusCode != 403 {
 		t.Fatalf("service key on listen = %d", resp.StatusCode)
+	}
+}
+
+// The speaker's panel shows what Husic plays (owner 11-15): the player in
+// use reports its song and whether it plays; the service key reads it.
+func TestRemoteStateIsReportedAndRead(t *testing.T) {
+	s := &Server{GatewayHeader: "X-Proof", GatewayKey: "edge-proof", ServiceKey: "svc-key"}
+	srv := httptest.NewServer(s.Handler())
+	defer srv.Close()
+	get := func() string {
+		req, _ := http.NewRequest("GET", srv.URL+"/api/remote/state", nil)
+		req.Header.Set("Authorization", "Bearer svc-key")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		b, _ := io.ReadAll(resp.Body)
+		return fmt.Sprint(resp.StatusCode, " ", strings.TrimSpace(string(b)))
+	}
+	if got := get(); got != `200 {"open":false}` {
+		t.Fatalf("no player: %s", got)
+	}
+	_, stop := listen(t, srv.URL, "exe-1")
+	defer stop()
+	waitConnected(t, s, 1)
+	if c := post(t, srv.URL, "/api/remote/state", "proof", `{"player":"exe-1","title":"晴天","artist":"周杰伦","playing":true}`); c != 204 {
+		t.Fatalf("report = %d", c)
+	}
+	if got := get(); got != `200 {"open":true,"title":"晴天","artist":"周杰伦","playing":true}` {
+		t.Fatalf("state: %s", got)
+	}
+	if c := post(t, srv.URL, "/api/remote/state", "svc-key", `{"player":"exe-1","title":"x"}`); c != 403 {
+		t.Fatalf("service key may not report: %d", c)
 	}
 }

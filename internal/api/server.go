@@ -78,6 +78,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/remote/listen", s.remoteListen)
 	mux.HandleFunc("POST /api/remote/active", s.remoteActive)
 	mux.HandleFunc("POST /api/remote/command", s.remoteCommand)
+	mux.HandleFunc("POST /api/remote/state", s.remoteReport)
+	mux.HandleFunc("GET /api/remote/state", s.remoteStateNow)
 	mux.HandleFunc("GET /api/library", s.library)
 	mux.HandleFunc("POST /api/songs/{id}/pin", s.pin)
 	mux.HandleFunc("POST /api/playlists", s.createPlaylist)
@@ -113,7 +115,7 @@ func (s *Server) Handler() http.Handler {
 // serviceRoutes is all a service key may reach.
 var serviceRoutes = map[string]bool{
 	"GET /api/library": true, "GET /api/search": true, "POST /api/stream": true,
-	"POST /api/remote/command": true,
+	"POST /api/remote/command": true, "GET /api/remote/state": true,
 }
 
 func serviceAllowed(r *http.Request) bool {

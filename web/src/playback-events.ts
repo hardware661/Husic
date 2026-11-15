@@ -2,7 +2,7 @@
 // play/pause behind the owner's back can be told apart from a click. Events
 // are batched to the server log (POST /api/playback-events); nothing is kept.
 
-export type PlaybackSource = 'button' | 'mediasession' | 'desktop' | 'auto' | 'audio' | 'remote';
+export type PlaybackSource = 'button' | 'mediasession' | 'desktop' | 'auto' | 'audio' | 'remote' | 'held';
 
 export type PlaybackEvent = { at: number; action: string; from: PlaybackSource | string; state: string };
 

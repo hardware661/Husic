@@ -68,3 +68,21 @@ export function listen(id: string, on: (c: RemoteCommand) => void): () => void {
   };
   return () => source.close();
 }
+
+export type RemoteState = { title: string; artist: string; playing: boolean };
+
+/** Same song and play state: nothing new to tell the server. */
+export function sameState(a: RemoteState | null, b: RemoteState): boolean {
+  return !!a && a.title === b.title && a.artist === b.artist && a.playing === b.playing;
+}
+
+/** Tells the server what this player is playing (for the speaker's panel). */
+export function reportState(id: string, st: RemoteState) {
+  fetch('/api/remote/state', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ player: id, ...st }),
+    credentials: 'same-origin',
+    keepalive: true,
+  }).catch(() => {});
+}

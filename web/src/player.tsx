@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { api, refOf, sized, inspectionID, type Item, type Stream } from './api';
+import { api, artistLine, refOf, sized, inspectionID, type Item, type Stream } from './api';
 import { navigate } from './router';
 import { toast } from './toast';
 import { useDesktopLyrics } from './desktop-lyrics';
@@ -8,7 +8,16 @@ import { consumeExpiredSleepTimer, useSleepTimerPlayback } from './sleep-timer';
 import { usePageVisible } from './view-activity';
 import { nextIndex as nextInQueue, orderAfterAppend, orderAfterInsertNext, orderAfterRemove, shuffled } from './queue';
 import { playbackRecorder, scheduleSend, type PlaybackSource } from './playback-events';
-import { listen as listenRemote, markActive, pickPlaylist, playerID, type RemoteCommand } from './remote-control';
+import {
+  listen as listenRemote,
+  markActive,
+  pickPlaylist,
+  playerID,
+  reportState,
+  sameState,
+  type RemoteCommand,
+  type RemoteState,
+} from './remote-control';
 
 // One <audio> element for the whole app life: iOS keeps playing in the
 // background and on the lock screen only if the same element is reused.
@@ -597,6 +606,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   // Remote control from the smart-speaker bridge (remote-control.ts): this
   // player answers when it is the one the owner used last.
   const remoteID = useMemo(playerID, []);
+  const remoteHold = useRef(0);
   useEffect(() => {
     markActive(remoteID, true);
     const used = () => markActive(remoteID);
@@ -605,6 +615,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     audio.addEventListener('play', used);
     const stop = listenRemote(remoteID, (c: RemoteCommand) => {
       notePlayback(c.action === 'pause' || c.action === 'stop' ? 'pause' : 'play', 'remote', audio);
+      // The speaker silences Xiao Ai right around a voice command, and that
+      // pause reaches this player over Bluetooth (AVRCP) a moment later; a
+      // play the speaker just asked for must not be undone by it (11-15).
+      remoteHold.current = c.action === 'pause' || c.action === 'stop' ? 0 : Date.now() + REMOTE_HOLD_MS;
       if (c.action === 'next') next();
       else if (c.action === 'pause' || c.action === 'stop') pause();
       else if (c.action === 'resume') resume();
@@ -634,6 +648,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     };
   }, [audio, remoteID, play, next, pause, resume]);
 
+  // What plays, for the speaker's panel: sent on every song or play change.
+  const reported = useRef<RemoteState | null>(null);
+  useEffect(() => {
+    const st = {
+      title: state.current?.title ?? '',
+      artist: state.current ? artistLine(state.current) : '',
+      playing: state.playing || state.loading,
+    };
+    if (sameState(reported.current, st)) return;
+    reported.current = st;
+    reportState(remoteID, st);
+  }, [remoteID, state.current, state.playing, state.loading]);
+
   const concealed = Boolean(blindSession && !blindSession.revealed && state.current && keyOf(blindSession.item) === keyOf(state.current));
   const presentation = useMemo(
     () =>
@@ -642,7 +669,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         : state.current,
     [concealed, state.current],
   );
-  useMediaSession({ ...state, current: presentation }, audio, { toggle, pause, resume, next, previous, seek });
+  const sessionPause = useCallback(() => {
+    if (Date.now() < remoteHold.current) {
+      notePlayback('pause', 'held', audio);
+      return;
+    }
+    pause();
+  }, [audio, pause]);
+  useMediaSession({ ...state, current: presentation }, audio, { toggle, pause: sessionPause, resume, next, previous, seek });
   useDesktopLyrics(state.current, audio, concealed);
   const playbackOrder = useMemo(
     () => (state.shuffle && order.current.length === state.queue.length ? [...order.current] : state.queue.map((_, index) => index)),
@@ -711,6 +745,9 @@ function nextIndex(length: number, index: number, s: Pick<PlayerState, 'shuffle'
   return nextInQueue(length, index, s.shuffle, order, wrap);
 }
 
+/** How long after a remote play a Bluetooth pause is ignored. */
+const REMOTE_HOLD_MS = 6000;
+
 function notePlayback(action: 'play' | 'pause', from: PlaybackSource, audio: HTMLAudioElement) {
   playbackRecorder.intent(action, from, audio.paused ? 'paused' : 'playing');
   scheduleSend();
@@ -771,7 +808,7 @@ function useMediaSession(
         'pause',
         () => {
           notePlayback('pause', 'mediasession', audio);
-          actions.pause();
+          actions.pause(); // ignores a Bluetooth pause right after a remote play (see remoteHold)
         },
       ],
       ['nexttrack', () => actions.next()],
